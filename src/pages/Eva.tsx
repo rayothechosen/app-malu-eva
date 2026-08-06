@@ -271,7 +271,7 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
                 <span key={channel.name} className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white">
                   <img src={channel.logoUrl} alt={channel.name} className="w-2.5 h-2.5" draggable={false} />
                 </span>
-              )) : <TikTokIcon size={11} />} Criar rotina
+              )) : <TikTokIcon size={11} />} Começar
             </button>
           </div>
         </div>
@@ -284,7 +284,7 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
           Sua assistente virtual
         </p>
         <h1 className="font-extrabold text-[29px] leading-[1.15] text-foreground tracking-tight">
-          {theme.id === "malu" ? <>Use a Malu para planejar<br /> sua rotina de conteúdo</> : <>Use a Eva para planejar<br /> seu conteúdo no{" "}</>}{" "}
+          {theme.id === "malu" ? <>Use a Malu para postar<br /> em varios canais</> : <>Use a Eva para postar<br /> no{" "}</>}{" "}
           <span className="relative inline-block">
             <em className="font-display italic" style={{ color: P }}>{theme.id === "malu" ? "e vender mais." : "TikTok Shop."}</em>
             <svg className="absolute left-0 -bottom-1.5 w-full" height="8" viewBox="0 0 60 8" preserveAspectRatio="none">
@@ -332,12 +332,12 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
 
           <div className="relative px-6 pt-7 pb-7">
             <span className="relative z-10 inline-block text-[9px] font-bold tracking-[0.14em] px-3 py-[5px] rounded-full uppercase text-white"
-              style={{ background: "rgba(255,255,255,0.18)" }}>Planejador de rotina</span>
+              style={{ background: "rgba(255,255,255,0.18)" }}>No automático</span>
             <h3 className="relative z-10 font-display italic font-semibold text-[30px] leading-[1.08] tracking-tight mt-3 max-w-[210px] text-white">
-              Planeje com a&nbsp;{theme.name}
+              Poste com a&nbsp;{theme.name}
             </h3>
             <p className="relative z-10 text-[12.5px] mt-2 leading-relaxed max-w-[200px]" style={{ color: "rgba(255,255,255,0.75)" }}>
-              {refundRequested ? "Sua automação foi encerrada após o pedido de reembolso. Seus packs continuam disponíveis." : theme.id === "malu" ? "Ela seleciona vídeos, cria sua rotina e sugere os melhores horários para postar." : "Ela organiza vídeos, legenda, hashtags e horários para o TikTok Shop."}
+              {refundRequested ? "Sua automação foi encerrada após o pedido de reembolso. Seus packs continuam disponíveis." : theme.id === "malu" ? "Ela encontra produtos da Shopee e prepara conteúdo para Shopee Video, TikTok e Instagram." : "Ela publica por você até liberar o TikTok Shop. Sem aparecer."}
             </p>
             {theme.id === "malu" && (
               <div className="relative z-10 flex items-center gap-1.5 mt-3">
@@ -352,7 +352,7 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
               <button onClick={(e) => { e.stopPropagation(); onStart(); }}
                 className="flex items-center gap-1.5 text-[13px] font-bold px-5 py-3 rounded-full active:scale-95 transition-transform"
                 style={{ background: LIME, color: "#16130E", boxShadow: "0 6px 18px rgba(0,0,0,0.28)" }}>
-                Criar rotina <ChevronRight className="w-4 h-4" />
+                Começar agora <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1991,7 +1991,8 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
       setAutomationLockedOpen(true);
       return;
     }
-    nav("destrava");
+    if (integrationStatus.activated_at) nav("destrava");
+    else setIntegrationOpen(true);
   }
 
   function criarLiveComProduto(produto: Produto) {
