@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:eva": "vite build --mode eva",
     "build:malu": "vite build --mode malu",
+    "build:malu-lp": "vite build --mode malu-lp",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

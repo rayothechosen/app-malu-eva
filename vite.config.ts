@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const standaloneApp = mode === "eva" || mode === "malu" ? mode : null;
+  const standaloneApp = mode === "eva" || mode === "malu" || mode === "malu-lp" ? mode : null;
   const appRoot = standaloneApp ? path.resolve(__dirname, "apps", standaloneApp) : __dirname;
 
   return {
