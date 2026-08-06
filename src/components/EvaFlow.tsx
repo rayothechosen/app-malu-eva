@@ -1139,10 +1139,12 @@ interface SavedRoutine {
   expires_at: string;
   videos: RoutineVideo[];
 }
+interface DailyRoutineCount { date: string; count: number; }
 
 type PlannerPhase = "saved" | "niche" | "quantity" | "searching" | "result";
 
 const EXCLUDED_NICHE = /alimenta|comida/i;
+const ROUTINE_DURATION_MS = 12 * 60 * 60 * 1000;
 const CAPTIONS_BY_NICHE: Record<string, string[]> = {
   moda: [
     "Esse achadinho deixou meu look muito mais prático e bonito.",
@@ -1243,11 +1245,16 @@ function shuffle<T>(items: T[]) {
 function activeRoutines(value: unknown): SavedRoutine[] {
   if (!Array.isArray(value)) return [];
   const now = Date.now();
-  return value.filter((routine): routine is SavedRoutine => {
-    if (!routine || typeof routine !== "object") return false;
+  return value.reduce<SavedRoutine[]>((routines, routine) => {
+    if (!routine || typeof routine !== "object") return routines;
     const candidate = routine as SavedRoutine;
-    return typeof candidate.expires_at === "string" && new Date(candidate.expires_at).getTime() > now && Array.isArray(candidate.videos);
-  });
+    const createdAt = new Date(candidate.created_at).getTime();
+    const storedExpiry = new Date(candidate.expires_at).getTime();
+    const cappedExpiry = Number.isFinite(createdAt) ? Math.min(storedExpiry, createdAt + ROUTINE_DURATION_MS) : storedExpiry;
+    if (!Number.isFinite(cappedExpiry) || cappedExpiry <= now || !Array.isArray(candidate.videos)) return routines;
+    routines.push({ ...candidate, expires_at: new Date(cappedExpiry).toISOString() });
+    return routines;
+  }, []);
 }
 
 function formatSchedule(iso: string) {
@@ -1257,6 +1264,17 @@ function formatSchedule(iso: string) {
   tomorrow.setDate(today.getDate() + 1);
   const prefix = date.toDateString() === today.toDateString() ? "Hoje" : date.toDateString() === tomorrow.toDateString() ? "Amanhã" : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   return `${prefix}, ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatBlockAt(iso: string) {
+  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function localDayKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function RoutineTopBar({ step, label, onBack }: { step: number; label: string; onBack: () => void }) {
@@ -1292,7 +1310,7 @@ function RoutineNicheStep({ niches, selected, onSelect, onNext, onBack, brandNam
         <div className="grid grid-cols-2 gap-3">
           {niches.map((niche, index) => { const active = selected === niche.nicho; return <motion.button type="button" key={niche.nicho} onClick={() => onSelect(niche.nicho)} whileTap={{ scale: .96 }} className="rounded-2xl p-4 text-left" style={{ background: active ? P : "#fff", color: active ? "#fff" : INK, border: active ? `1.5px solid ${P}` : CARD_EDGE, boxShadow: active ? "0 10px 22px rgba(122,43,245,.28)" : "0 2px 8px rgba(22,19,14,.05)" }}>
             <span className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: active ? "rgba(255,255,255,.16)" : "rgba(122,43,245,.08)" }}><NichoIcon tipo={nicheIcon(niche.nicho)} size={23} stroke={active ? "#fff" : INK} accent={active ? LIME : P} bg="transparent" /></span>
-            <b className="block text-[11px] leading-snug">{nicheLabel(niche.nicho)}</b><span className={active ? "text-white/65 text-[9.5px]" : "text-foreground/45 text-[9.5px]"}>{Number(niche.total).toLocaleString("pt-BR")} vídeos</span>
+            <b className="block text-[11px] leading-snug">{nicheLabel(niche.nicho)}</b>
           </motion.button>; })}
         </div>
       </>}
@@ -1330,9 +1348,32 @@ function RoutineResult({ routine, onBack, onNew, limitReached }: { routine: Save
   const [preview, setPreview] = useState<string | null>(null); const [copied, setCopied] = useState<string | null>(null);
   const copy = async (value: string, key: string) => { await copyToClipboard(value); setCopied(key); window.setTimeout(() => setCopied(null), 1600); };
   return <div className="min-h-screen pb-12" style={PAGE_BG}><div className="max-w-md mx-auto"><RoutineTopBar step={2} label="Rotina pronta" onBack={onBack} /><div className="px-5"><div className="rounded-[1.5rem] p-5 mb-5" style={{ background: CARD_DARK, boxShadow: "0 14px 30px rgba(22,19,14,.24)" }}><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-bold tracking-[.15em] uppercase text-white/45">Sua rotina foi planejada</p><h1 className="text-white text-[1.35rem] font-extrabold leading-tight mt-1">{routine.videos.length} vídeos para<br />{routine.niche_label}</h1></div><CalendarDays className="w-7 h-7" style={{ color: LIME }} /></div><p className="text-[11px] text-white/55 mt-3">Disponível até {new Date(routine.expires_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}.</p></div>
+    <div className="mb-4 rounded-xl px-3.5 py-3 flex items-center gap-2" style={{ background: "rgba(122,43,245,.08)", border: "1px solid rgba(122,43,245,.16)" }}><Clock className="w-4 h-4 shrink-0" style={{ color: P }} /><p className="text-[10.5px] font-semibold leading-snug text-foreground/70">Esta rotina será bloqueada em <strong style={{ color: P }}>{formatBlockAt(routine.expires_at)}</strong>.</p></div>
     <div className="space-y-4">{routine.videos.map((video, index) => <motion.article key={video.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .035 }} className="bg-white rounded-[1.4rem] p-3.5" style={{ border: CARD_EDGE, boxShadow: "0 4px 12px rgba(22,19,14,.06)" }}><div className="flex gap-3"><button type="button" onClick={() => setPreview(video.url)} className="relative w-[92px] h-[146px] shrink-0 rounded-xl overflow-hidden bg-black"><video src={`${video.url}#t=0.1`} muted preload="metadata" playsInline className="w-full h-full object-cover" /><span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center"><Play className="w-3.5 h-3.5" fill={INK} /></span></span></button><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><p className="text-[11px] font-extrabold">Vídeo {index + 1}</p><span className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: P }}>{formatSchedule(video.scheduled_at)}</span></div><p className="text-[10px] font-semibold leading-snug text-foreground/65 mt-2">{video.caption}</p><p className="text-[9.5px] leading-snug mt-1.5" style={{ color: P }}>{video.hashtags}</p><div className="mt-2.5 rounded-lg px-2 py-1.5 flex gap-1.5" style={{ background: "rgba(77,124,15,.08)" }}><Check className="w-3 h-3 shrink-0" strokeWidth={3} style={{ color: "#4d7c0f" }} /><span className="text-[8.5px] leading-snug font-semibold" style={{ color: "#4d7c0f" }}>Materiais verificados: sem direitos autorais e liberados para publicação.</span></div></div></div><div className="grid grid-cols-3 gap-2 mt-3"><button type="button" onClick={() => downloadVideo(video.url, index)} className="py-2 rounded-xl text-[9px] font-bold flex items-center justify-center gap-1" style={{ background: CARD_DARK, color: "#fff" }}><Download className="w-3 h-3" /> Baixar</button><button type="button" onClick={() => void copy(video.caption, `caption-${index}`)} className="py-2 rounded-xl text-[9px] font-bold flex items-center justify-center gap-1" style={{ background: "rgba(122,43,245,.08)", color: P }}><Copy className="w-3 h-3" /> {copied === `caption-${index}` ? "Copiado" : "Legenda"}</button><button type="button" onClick={() => void copy(video.hashtags, `hashtags-${index}`)} className="py-2 rounded-xl text-[9px] font-bold flex items-center justify-center gap-1" style={{ background: "rgba(22,19,14,.06)", color: INK }}><Copy className="w-3 h-3" /> {copied === `hashtags-${index}` ? "Copiado" : "Hashtags"}</button></div></motion.article>)}</div>
-    <div className="mt-6">{limitReached ? <p className="text-center text-[11px] text-foreground/45">Você já criou suas 3 rotinas de hoje. Amanhã poderá planejar novamente.</p> : <BtnLime onClick={onNew}><Zap className="w-4 h-4" /> Criar outra rotina</BtnLime>}</div>
+    <div className="mt-6"><BtnLime onClick={onBack}><ArrowLeft className="w-4 h-4" /> Voltar ao painel</BtnLime></div>
   </div></div><AnimatePresence>{preview && <VideoModal url={preview} onClose={() => setPreview(null)} />}</AnimatePresence></div>;
+}
+
+function RoutineStatusCard({ routine, onOpen }: { routine: SavedRoutine; onOpen: () => void }) {
+  const now = Date.now();
+  const ordered = [...routine.videos].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  const overdue = ordered.filter(video => new Date(video.scheduled_at).getTime() <= now);
+  const next = ordered.find(video => new Date(video.scheduled_at).getTime() > now);
+  const status = overdue.length > 0
+    ? { title: `${overdue.length} ${overdue.length === 1 ? "vídeo está" : "vídeos estão"} no horário`, detail: "Bora postar para manter sua rotina em dia.", color: "#DC2626", bg: "rgba(220,38,38,.08)" }
+    : next
+      ? { title: `Próximo: ${formatSchedule(next.scheduled_at)}`, detail: `Faltam ${ordered.length} vídeos na sua rotina.`, color: P, bg: "rgba(122,43,245,.08)" }
+      : { title: "Horários concluídos", detail: "Confira os materiais da sua rotina.", color: "#4d7c0f", bg: "rgba(77,124,15,.08)" };
+
+  return <button type="button" onClick={onOpen} className="w-full text-left rounded-[1.45rem] bg-white p-4" style={{ border: CARD_EDGE, boxShadow: "0 6px 18px rgba(22,19,14,.07)" }}>
+    <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-extrabold tracking-[.14em] uppercase text-foreground/40">Olha aqui tua rotina</p><h2 className="text-[14px] font-extrabold mt-1">{routine.videos.length} vídeos · {routine.niche_label}</h2></div><span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: status.bg }}><ChevronRight className="w-4 h-4" style={{ color: status.color }} /></span></div>
+    <div className="mt-3 rounded-xl px-3 py-2.5" style={{ background: status.bg }}><p className="text-[11px] font-extrabold" style={{ color: status.color }}>{status.title}</p><p className="text-[10px] text-foreground/55 mt-0.5">{status.detail}</p></div>
+    <div className="mt-3 flex items-center gap-1.5 text-[9.5px] font-semibold text-foreground/55"><Clock className="w-3.5 h-3.5" style={{ color: P }} /> Bloqueia em {formatBlockAt(routine.expires_at)}</div>
+  </button>;
+}
+
+function SavedRoutinesPanel({ routines, onOpen, onNew, onExit, loading, limitReached }: { routines: SavedRoutine[]; onOpen: (routine: SavedRoutine) => void; onNew: () => void; onExit: () => void; loading: boolean; limitReached: boolean }) {
+  return <div className="min-h-screen" style={PAGE_BG}><div className="max-w-md mx-auto px-5 pt-8 pb-12"><button type="button" className="flex items-center gap-1.5 text-foreground/50 mb-8" onClick={onExit}><ArrowLeft className="w-4 h-4" /><span className="text-[11px] font-bold">Início</span></button>{loading ? <EvaLoader label="Carregando suas rotinas..." /> : <><p className="text-[10px] uppercase font-bold tracking-[.18em] text-foreground/40">Planejador de rotina</p><h1 className="text-[1.8rem] font-extrabold leading-tight mt-2">Seu conteúdo,<br /><em className="italic" style={{ color: P }}>organizado para postar.</em></h1><p className="text-[12px] text-foreground/55 mt-3">Você pode criar até 3 rotinas por dia. Cada uma é bloqueada exatamente 12 horas após a criação.</p>{routines.length > 0 ? <div className="mt-7"><div className="flex items-center justify-between mb-3"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-foreground/40">Suas rotinas ativas</p><span className="text-[10px] font-bold" style={{ color: P }}>{routines.length} ativa{routines.length > 1 ? "s" : ""}</span></div><div className="space-y-3">{routines.map(routine => <RoutineStatusCard key={routine.id} routine={routine} onOpen={() => onOpen(routine)} />)}</div></div> : <div className="mt-7 rounded-[1.5rem] bg-white px-5 py-7 text-center" style={{ border: CARD_EDGE, boxShadow: "0 4px 12px rgba(22,19,14,.05)" }}><Zap className="w-6 h-6 mx-auto mb-3" style={{ color: P }} /><b className="block text-[13px]">Nenhuma rotina ativa agora</b><p className="text-[10.5px] leading-relaxed text-foreground/50 mt-1.5">Crie sua primeira rotina e receba os vídeos com horário, legenda e hashtags.</p></div>}<div className="mt-7">{limitReached ? <div className="rounded-2xl bg-white px-5 py-4 text-center" style={{ border: CARD_EDGE }}><b className="text-[12px]">Limite de hoje alcançado</b><p className="text-[10.5px] text-foreground/50 mt-1">Você já criou suas 3 rotinas de hoje. As ativas ficam disponíveis por 12 horas.</p></div> : <BtnLime onClick={onNew}><Zap className="w-4 h-4" /> Criar minha rotina</BtnLime>}</div></>}</div></div>;
 }
 
 function SavedRoutines({ routines, onOpen, onNew, onExit, loading, limitReached }: { routines: SavedRoutine[]; onOpen: (routine: SavedRoutine) => void; onNew: () => void; onExit: () => void; loading: boolean; limitReached: boolean }) {
@@ -1344,14 +1385,41 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
   const [niches, setNiches] = useState<DatabaseNiche[]>([]); const [nichesLoading, setNichesLoading] = useState(true); const [nichesError, setNichesError] = useState<string | null>(null);
   const [selectedNiche, setSelectedNiche] = useState(""); const [quantity, setQuantity] = useState(3);
   const [routines, setRoutines] = useState<SavedRoutine[]>([]); const [currentRoutine, setCurrentRoutine] = useState<SavedRoutine | null>(null); const [routinesLoading, setRoutinesLoading] = useState(true);
+  const [dailyRoutineCounts, setDailyRoutineCounts] = useState<Record<string, DailyRoutineCount>>({});
+  const [dailyCountsReady, setDailyCountsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   void _produtos;
 
   const brandRoutines = routines.filter(routine => routine.brand === theme.id);
-  const routinesToday = brandRoutines.filter(routine => new Date(routine.created_at).toDateString() === new Date().toDateString());
-  const limitReached = routinesToday.length >= 3;
+  const todayKey = localDayKey();
+  const routineCountToday = dailyRoutineCounts[theme.id]?.date === todayKey
+    ? dailyRoutineCounts[theme.id].count
+    : brandRoutines.filter(routine => localDayKey(new Date(routine.created_at)) === todayKey).length;
+  const limitReached = routineCountToday >= 3;
 
-  useEffect(() => { let active = true; (async () => { const [{ data: userData }, { data, error: dbError }] = await Promise.all([supabase.auth.getUser(), supabase.rpc("get_nichos_videos")]); if (!active) return; const savedSource = userData.user?.user_metadata?.content_routines; const saved = activeRoutines(savedSource); setRoutines(saved); setRoutinesLoading(false); if (Array.isArray(savedSource) && savedSource.length !== saved.length) void supabase.auth.updateUser({ data: { content_routines: saved } }); if (dbError) { setNichesError("Não foi possível carregar os nichos agora. Tente novamente em instantes."); } else { setNiches(((data ?? []) as DatabaseNiche[]).filter(niche => !EXCLUDED_NICHE.test(niche.nicho) && Number(niche.total) > 0)); } setNichesLoading(false); })(); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; (async () => { const [{ data: userData }, { data, error: dbError }] = await Promise.all([supabase.auth.getUser(), supabase.rpc("get_nichos_videos")]); if (!active) return; const savedSource = userData.user?.user_metadata?.content_routines; const saved = activeRoutines(savedSource); setRoutines(saved); setRoutinesLoading(false); if (Array.isArray(savedSource) && JSON.stringify(savedSource) !== JSON.stringify(saved)) void supabase.auth.updateUser({ data: { content_routines: saved } }); if (dbError) { setNichesError("Não foi possível carregar os nichos agora. Tente novamente em instantes."); } else { setNiches(((data ?? []) as DatabaseNiche[]).filter(niche => !EXCLUDED_NICHE.test(niche.nicho) && Number(niche.total) > 0)); } setNichesLoading(false); })(); return () => { active = false; }; }, []);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!active) return;
+      const savedCounts = user?.user_metadata?.routine_daily_counts;
+      if (savedCounts && typeof savedCounts === "object" && !Array.isArray(savedCounts)) {
+        setDailyRoutineCounts(savedCounts as Record<string, DailyRoutineCount>);
+        setDailyCountsReady(true);
+        return;
+      }
+      const fallback: Record<string, DailyRoutineCount> = {};
+      for (const routine of activeRoutines(user?.user_metadata?.content_routines)) {
+        if (localDayKey(new Date(routine.created_at)) !== localDayKey()) continue;
+        const previous = fallback[routine.brand];
+        fallback[routine.brand] = { date: localDayKey(), count: (previous?.count ?? 0) + 1 };
+      }
+      setDailyRoutineCounts(fallback);
+      setDailyCountsReady(true);
+    }).catch(() => { if (active) setDailyCountsReady(true); });
+    return () => { active = false; };
+  }, []);
 
   const createRoutine = useCallback(async () => {
     if (limitReached || !selectedNiche) return;
@@ -1368,14 +1436,16 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
     if (fetchError || candidates.length < quantity) { setError("Não foi possível separar a quantidade de vídeos agora. Escolha outro nicho ou tente novamente."); setPhase("niche"); return; }
     const key = nicheKey(chosen.nicho); const captions = CAPTIONS_BY_NICHE[key] ?? CAPTIONS_BY_NICHE.virais; const contentSource = candidates.find(video => video.legenda || video.caption || video.caption_pt_br || video.hashtags); const caption = contentSource?.legenda || contentSource?.caption || contentSource?.caption_pt_br || captions[Math.floor(Math.random() * captions.length)]; const hashtags = Array.isArray(contentSource?.hashtags) ? contentSource.hashtags.join(" ") : contentSource?.hashtags || HASHTAGS_BY_NICHE[key] || HASHTAGS_BY_NICHE.virais;
     const now = new Date(); const firstPost = new Date(now.getTime() + (12 + Math.floor(Math.random() * 28)) * 60_000);
-    const routine: SavedRoutine = { id: crypto.randomUUID(), brand: theme.id, niche: chosen.nicho, niche_label: nicheLabel(chosen.nicho), created_at: now.toISOString(), expires_at: new Date(now.getTime() + 86_400_000).toISOString(), videos: candidates.map((video, index) => ({ id: video.message_id, url: video.link_video as string, niche: chosen.nicho, caption, hashtags, scheduled_at: new Date(firstPost.getTime() + index * 40 * 60_000).toISOString() })) };
-    const nextRoutines = [routine, ...activeRoutines(routines)].slice(0, 12); const { error: saveError } = await supabase.auth.updateUser({ data: { content_routines: nextRoutines } });
+    const routine: SavedRoutine = { id: crypto.randomUUID(), brand: theme.id, niche: chosen.nicho, niche_label: nicheLabel(chosen.nicho), created_at: now.toISOString(), expires_at: new Date(now.getTime() + ROUTINE_DURATION_MS).toISOString(), videos: candidates.map((video, index) => ({ id: video.message_id, url: video.link_video as string, niche: chosen.nicho, caption, hashtags, scheduled_at: new Date(firstPost.getTime() + index * 40 * 60_000).toISOString() })) };
+    const nextRoutines = [routine, ...activeRoutines(routines)].slice(0, 12);
+    const nextDailyCounts = { ...dailyRoutineCounts, [theme.id]: { date: todayKey, count: routineCountToday + 1 } };
+    const { error: saveError } = await supabase.auth.updateUser({ data: { content_routines: nextRoutines, routine_daily_counts: nextDailyCounts } });
     if (saveError) { setError("A rotina foi criada, mas não conseguimos salvá-la na sua conta. Tente novamente."); setPhase("niche"); return; }
-    setRoutines(nextRoutines); setCurrentRoutine(routine); setPhase("result");
-  }, [limitReached, selectedNiche, niches, quantity, routines, theme.id]);
+    setRoutines(nextRoutines); setDailyRoutineCounts(nextDailyCounts); setCurrentRoutine(routine); setPhase("result");
+  }, [limitReached, selectedNiche, niches, quantity, routines, dailyRoutineCounts, routineCountToday, theme.id, todayKey]);
 
   return <AnimatePresence mode="wait">
-    {phase === "saved" && <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><SavedRoutines routines={brandRoutines} loading={routinesLoading} limitReached={limitReached} onExit={onExit} onNew={() => { setError(null); setPhase("niche"); }} onOpen={routine => { setCurrentRoutine(routine); setPhase("result"); }} /></motion.div>}
+    {phase === "saved" && <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><SavedRoutinesPanel routines={brandRoutines} loading={routinesLoading || !dailyCountsReady} limitReached={limitReached} onExit={onExit} onNew={() => { setError(null); setPhase("niche"); }} onOpen={routine => { setCurrentRoutine(routine); setPhase("result"); }} /></motion.div>}
     {phase === "niche" && <motion.div key="niche" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RoutineNicheStep niches={niches} selected={selectedNiche} onSelect={setSelectedNiche} onNext={() => setPhase("quantity")} onBack={() => setPhase("saved")} brandName={theme.name} loading={nichesLoading} error={error ?? nichesError} /></motion.div>}
     {phase === "quantity" && <motion.div key="quantity" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RoutineQuantityStep quantity={quantity} onSelect={setQuantity} onNext={() => void createRoutine()} onBack={() => setPhase("niche")} /></motion.div>}
     {phase === "searching" && <motion.div key="searching" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><RoutineSearching brandName={theme.name} imageUrl={theme.searchImageUrl} label={selectedNiche === "auto" ? "você" : nicheLabel(selectedNiche)} /></motion.div>}
