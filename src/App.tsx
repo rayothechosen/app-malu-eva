@@ -1,98 +1,36 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Login from "./pages/Login";
-import Index from "./pages/Index";
-import PackVideos from "./pages/PackVideos";
-import IAVideos from "./pages/IAVideos";
-import ProdutosEmAlta from "./pages/ProdutosEmAlta";
-import GruposLucrativos from "./pages/GruposLucrativos";
-import CriadorVideosIA from "./pages/CriadorVideosIA";
-import CarrosseisProntos from "./pages/CarrosseisProntos";
-import StoriesProntos from "./pages/StoriesProntos";
-import GeradorVideosProprios from "./pages/GeradorVideosProprios";
-import Treinamento from "./pages/Treinamento";
-import Admin from "./pages/Admin";
-import Conta from "./pages/Conta";
-import NotFound from "./pages/NotFound";
-import DemoIA from "./pages/DemoIA";
-import DemoPV from "./pages/DemoPV";
-import DemoPVI from "./pages/DemoPVI";
-import PublicadorAutomatico from "./pages/PublicadorAutomatico";
-import PlanoPostagem from "./pages/PlanoPostagem";
-import GeradorModeloIA from "./pages/GeradorModeloIA";
-import SimulacaoIA  from "./pages/SimulacaoIA";
-import SimulacaoPVI from "./pages/SimulacaoPVI";
-import SimulacaoVP  from "./pages/SimulacaoVP";
-import VideosAgora  from "./pages/VideosAgora";
-import VideosAgora2 from "./pages/VideosAgora2";
-import LiveShopDemo    from "./pages/LiveShopDemo";
-import AfiliadadaLive  from "./pages/AfiliadadaLive";
-import GerenciadorLive  from "./pages/GerenciadorLive";
-import DestravaTikTokShop from "./pages/DestravaTikTokShop";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-const queryClient = new QueryClient();
+const LiveShopDemo = lazy(() => import("./pages/LiveShopDemo"));
+const Eva = lazy(() => import("./pages/Eva"));
+const Malu = lazy(() => import("./pages/Malu"));
+
+function RouteLoader() {
+  return <div className="min-h-screen bg-[#F4EFE6] flex items-center justify-center text-sm font-semibold text-black/45">Carregando...</div>;
+}
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Rota publica — login */}
-          <Route path="/login" element={<Login />} />
+  <BrowserRouter>
+    <Suspense fallback={<RouteLoader />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/liveshop" replace />} />
 
-          {/* Rotas protegidas — exigem usuario autenticado */}
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/pack-videos" element={<ProtectedRoute><PackVideos /></ProtectedRoute>} />
-          <Route path="/ia-videos" element={<ProtectedRoute><IAVideos /></ProtectedRoute>} />
-          <Route path="/produtos-em-alta" element={<ProtectedRoute><ProdutosEmAlta /></ProtectedRoute>} />
-          <Route path="/grupos-lucrativos" element={<ProtectedRoute><GruposLucrativos /></ProtectedRoute>} />
-          <Route path="/criador-videos-ia" element={<ProtectedRoute><CriadorVideosIA /></ProtectedRoute>} />
-          <Route path="/carrosseis-prontos" element={<ProtectedRoute><CarrosseisProntos /></ProtectedRoute>} />
-          <Route path="/stories-prontos" element={<ProtectedRoute><StoriesProntos /></ProtectedRoute>} />
-          <Route path="/gerador-videos-proprios" element={<ProtectedRoute><GeradorVideosProprios /></ProtectedRoute>} />
-          <Route path="/treinamento" element={<ProtectedRoute><Treinamento /></ProtectedRoute>} />
+        <Route path="/liveshop" element={<LiveShopDemo />} />
 
-          {/* Conta do usuario */}
-          <Route path="/conta" element={<ProtectedRoute><Conta /></ProtectedRoute>} />
+        <Route path="/eva/v1/*" element={<Eva versao="v1" />} />
+        <Route path="/eva/v2/*" element={<Eva versao="v2" />} />
+        <Route path="/eva/*" element={<Eva />} />
 
-          {/* Painel admin — protegido + verificacao de admin interna */}
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        <Route path="/malu/*" element={<Malu />} />
 
-          {/* Demos públicos — sem autenticação */}
-          <Route path="/demoia"       element={<DemoIA />} />
-          <Route path="/demopv"       element={<DemoPV />} />
-          <Route path="/demopvi"      element={<DemoPVI />} />
-          <Route path="/simulacao-ia"  element={<SimulacaoIA />} />
-          <Route path="/simulacao-pvi" element={<SimulacaoPVI />} />
-          <Route path="/simulacao-vp"  element={<SimulacaoVP />} />
-          <Route path="/videos-agora"   element={<VideosAgora />} />
-          <Route path="/videos-agora-2" element={<VideosAgora2 />} />
-          <Route path="/liveshop"       element={<LiveShopDemo />} />
-          <Route path="/afiliadalive"   element={<AfiliadadaLive />} />
-          <Route path="/gerenciador-live" element={<GerenciadorLive />} />
-          <Route path="/gerenciador-live-mochila" element={<GerenciadorLive variant="mochila" />} />
-          <Route path="/gerenciador-live-dorama"  element={<GerenciadorLive variant="dorama" />} />
-          <Route path="/gerenciador-live-camisa"  element={<GerenciadorLive variant="camisa" />} />
-          <Route path="/destrava-tiktok-shop"     element={<DestravaTikTokShop />} />
-          <Route path="/destrava-tiktok-shop/v1"  element={<DestravaTikTokShop versao="v1" />} />
-          <Route path="/destrava-tiktok-shop/v2"  element={<DestravaTikTokShop versao="v2" />} />
-
-          {/* Novos módulos */}
-          <Route path="/publicador-automatico" element={<ProtectedRoute><PublicadorAutomatico /></ProtectedRoute>} />
-          <Route path="/plano-postagem"        element={<ProtectedRoute><PlanoPostagem /></ProtectedRoute>} />
-          <Route path="/gerador-modelo-ia"     element={<ProtectedRoute><GeradorModeloIA /></ProtectedRoute>} />
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+        {/* Rotas antigas do Destrava — redirecionam para a Eva */}
+        <Route path="/destrava-tiktok-shop" element={<Navigate to="/eva/postar" replace />} />
+        <Route path="/destrava-tiktok-shop/v1" element={<Navigate to="/eva/v1/postar" replace />} />
+        <Route path="/destrava-tiktok-shop/v2" element={<Navigate to="/eva/v2/postar" replace />} />
+        <Route path="*" element={<Navigate to="/liveshop" replace />} />
+      </Routes>
+    </Suspense>
+  </BrowserRouter>
 );
 
 export default App;

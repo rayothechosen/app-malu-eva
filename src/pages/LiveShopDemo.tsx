@@ -96,7 +96,7 @@ const AULAS = [
   { num:"01", titulo:"Como criar sua primeira live no TikTok Shop", desc:"Configure tudo em menos de 10 minutos e comece a vender.", duracao:"28min", nivel:"Iniciante",     aulas:4 },
   { num:"02", titulo:"Produtos que mais vendem em live",            desc:"Os nichos e estratégias com maior taxa de conversão.",   duracao:"41min", nivel:"Iniciante",     aulas:5 },
   { num:"03", titulo:"IA de apresentador: guia completo",           desc:"Personalize seu apresentador virtual passo a passo.",    duracao:"35min", nivel:"Intermediário", aulas:6 },
-  { num:"04", titulo:"Destrava TikTok Shop — perfil do zero",             desc:"Como liberar o live shopping em contas novas.",         duracao:"22min", nivel:"Iniciante",     aulas:3 },
+  { num:"04", titulo:"Destrava TikTok Shop: perfil do zero",             desc:"Como liberar o live shopping em contas novas.",         duracao:"22min", nivel:"Iniciante",     aulas:3 },
 ];
 
 // "Olhando agora" fake-urgency por produto destaque
@@ -845,7 +845,7 @@ const LEGENDA_TEMPLATES: Record<string, string[]> = {
     "Esse achado da Shopee vai mudar seu look! Corre ver 🛍️",
     "Comprei e me arrependi de não ter comprado antes 😍",
     "O achado de moda que todo mundo tá comprando agora 🔥",
-    "Esse produto tá esgotando rápido — pega o link na bio ✨",
+    "Esse produto tá esgotando rápido, pega o link na bio ✨",
     "Testei e aprovei! Qualidade surreal pelo preço 💜",
     "Não acredito que encontrei isso na Shopee 😱",
     "Look completo por um preço impossível! Tá no link 🛒",
@@ -870,7 +870,7 @@ const LEGENDA_TEMPLATES: Record<string, string[]> = {
   ],
   "eletro": [
     "Esse gadget mudou minha produtividade 📱",
-    "O eletrônico do mês — melhor compra que fiz 🔥",
+    "O eletrônico do mês, melhor compra que fiz 🔥",
     "Tecnologia acessível que vale muito o preço 😍",
     "Comprei achando que era furada e me surpreendi ✨",
     "Esse produto tech tá esgotando na Shopee 💜",
@@ -976,7 +976,7 @@ function DStep4Content({ nicho, onSubmit }: { nicho:string; onSubmit:()=>void })
                 viralizar no seu perfil
               </p>
               <p className="text-white/45 text-[11px] leading-snug">
-                A IA posta automaticamente com legenda e hashtags prontas — você não precisa gravar nada.
+                A IA posta automaticamente com legenda e hashtags prontas. Você não precisa gravar nada.
               </p>
             </div>
           </div>
@@ -1225,7 +1225,7 @@ function ProdutosScreen({ onBack, onCriarLive }: { onBack:()=>void; onCriarLive:
             <span>Produtos </span><span style={{ color:P }}>em Alta</span>
           </h2>
           <Divider />
-          <p className="text-foreground/50 text-[13px] mt-3">Selecionados com base nas <span className="font-bold text-foreground/70">vendas das últimas 24h</span> — esses são os que mais convertem agora.</p>
+          <p className="text-foreground/50 text-[13px] mt-3">Selecionados com base nas <span className="font-bold text-foreground/70">vendas das últimas 24h</span>. Esses são os que mais convertem agora.</p>
         </div>
 
         <div className="px-5 pb-14 mt-4">

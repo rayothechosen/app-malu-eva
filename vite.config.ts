@@ -4,7 +4,13 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const standaloneApp = mode === "eva" || mode === "malu" ? mode : null;
+  const appRoot = standaloneApp ? path.resolve(__dirname, "apps", standaloneApp) : __dirname;
+
+  return {
+  root: appRoot,
+  envDir: __dirname,
   server: {
     host: "::",
     port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
@@ -15,4 +21,19 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  build: {
+    outDir: standaloneApp ? path.resolve(__dirname, "dist", standaloneApp) : "dist",
+    emptyOutDir: standaloneApp ? true : undefined,
+    rollupOptions: {
+      input: standaloneApp ? path.resolve(appRoot, "index.html") : undefined,
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          motion: ["framer-motion"],
+          supabase: ["@supabase/supabase-js"],
+        },
+      },
+    },
+  },
+};
+});
