@@ -16,8 +16,7 @@
 .malu-lp-phone__notch { position:absolute; width:52px; height:12px; border-radius:0 0 12px 12px; background:#17120f; top:0; left:50%; transform:translateX(-50%); z-index:2; }
 .malu-lp-phone__shine { position:absolute; inset:0; background:linear-gradient(120deg,transparent 18%,#ffffff25 42%,transparent 59%); pointer-events:none; }
 .malu-lp-play { position:absolute; left:50%; top:50%; z-index:4; display:grid; place-items:center; width:46px; height:46px; padding-left:3px; border:0; border-radius:50%; background:#fff; color:var(--orange); box-shadow:0 7px 16px #0004; transform:translate(-50%,-50%); cursor:pointer; }
-.malu-lp-hero__video > span { position:absolute; left:50%; bottom:-24px; width:180px; color:#a24a23; font-size:8px; font-weight:700; text-transform:uppercase; transform:translateX(-50%) rotate(1.6deg); }
-.malu-lp-scroll { margin-top:17px; color:var(--orange); font-size:8px; font-weight:800; text-decoration:none; text-transform:uppercase; }
+.malu-lp-scroll { margin-top:9px; color:var(--orange); font-size:8px; font-weight:800; text-decoration:none; text-transform:uppercase; }
 .malu-lp-scroll span { margin-left:4px; font-size:13px; }
 .malu-lp-section { padding:48px 0; }
 .malu-lp-section--cream { background:var(--cream-deep); }
@@ -73,13 +72,6 @@
 .malu-lp-audio i { display:grid; gap:2px; min-width:0; font-style:normal; font-size:6px; line-height:1.2; color:#ffe8dd; }
 .malu-lp-audio i b { color:white; font-size:7px; }
 .malu-lp-audio small { margin-left:auto; font-size:6px; color:#ffe1d4; }
-.malu-lp-proof { display:flex; flex-direction:column; align-items:center; text-align:center; }
-.malu-lp-proof__avatar { display:grid; place-items:center; width:44px; height:44px; margin-bottom:-3px; border:3px solid white; border-radius:50%; background:linear-gradient(135deg,#f54f13,#ffb567); color:white; font-family:Fraunces,serif; font-size:23px; font-weight:800; box-shadow:0 3px 10px #81431e2a; }
-.malu-lp-stars { color:#fa6a1c; font-size:12px; letter-spacing:1px; }
-.malu-lp-proof > div:nth-child(2) span { color:#8a7d72; font-size:8px; }
-.malu-lp-proof h2 { max-width:360px; margin-top:14px; font-size:19px; line-height:1.08; letter-spacing:-.045em; }
-.malu-lp-proof p { max-width:344px; margin-top:10px; color:#665d56; font-size:10px; line-height:1.5; }
-.malu-lp-proof .malu-lp-cta { margin-top:17px; }
 .malu-lp-whatsapp { padding:44px 0; background:linear-gradient(120deg,#006d60,#075348); color:white; text-align:center; }
 .malu-lp-whatsapp svg { color:#b7eee0; }
 .malu-lp-whatsapp h2 { margin-top:7px; font-size:25px; line-height:1; letter-spacing:-.055em; }

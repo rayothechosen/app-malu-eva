@@ -8,7 +8,6 @@ import {
   MessageCircle,
   Play,
   ShieldCheck,
-  Sparkles,
   Star,
 } from "lucide-react";
 import { BRAND_THEMES } from "@/lib/brandTheme";
@@ -59,7 +58,6 @@ export default function MaluLanding() {
       <section className="malu-lp-hero">
         <div className="malu-lp-container malu-lp-hero__content">
           <img className="malu-lp-logo" src={malu.logoUrl} alt="Malu" />
-          <div className="malu-lp-eyebrow"><Sparkles size={13} /> sua nova assistente de conteúdo</div>
           <h1>Conteúdos que ajudam você a <em>vender todos os dias.</em></h1>
           <p>Conheça a Malu: ela separa os melhores criativos, organiza sua rotina e deixa tudo pronto para você publicar.</p>
 
@@ -68,7 +66,6 @@ export default function MaluLanding() {
             <button className="malu-lp-play" type="button" aria-label="Reproduzir apresentação">
               <Play size={23} fill="currentColor" />
             </button>
-            <span>Veja a Malu em ação</span>
           </div>
           <a className="malu-lp-scroll" href="#recursos">conheça por dentro <span>↓</span></a>
         </div>
@@ -161,16 +158,6 @@ export default function MaluLanding() {
             </div>
           </div>
           <div className="malu-lp-center"><CtaButton dark>QUERO COMEÇAR MINHA ROTINA</CtaButton></div>
-        </div>
-      </section>
-
-      <section className="malu-lp-section malu-lp-section--cream malu-lp-proof-section">
-        <div className="malu-lp-container malu-lp-proof">
-          <div className="malu-lp-proof__avatar">M</div>
-          <div><div className="malu-lp-stars">★★★★★</div><span>uma rotina simples, prática e pensada para afiliadas</span></div>
-          <h2>“A Malu não tenta complicar. Ela entrega um caminho claro para manter constância no conteúdo.”</h2>
-          <p>Você escolhe o nicho e o formato. A Malu organiza os materiais, a legenda, as hashtags e os horários sugeridos para o dia.</p>
-          <CtaButton>QUERO TER ESSA ROTINA</CtaButton>
         </div>
       </section>
 
