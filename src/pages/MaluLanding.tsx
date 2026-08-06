@@ -4,11 +4,8 @@ import {
   Check,
   ChevronDown,
   CirclePlay,
-  Clock3,
   MessageCircle,
   Play,
-  ShieldCheck,
-  Star,
 } from "lucide-react";
 import { BRAND_THEMES } from "@/lib/brandTheme";
 
@@ -53,19 +50,20 @@ export default function MaluLanding() {
 
   return (
     <main className="malu-lp">
-      <div className="malu-lp__announcement">Conteúdos prontos para a rotina de afiliadas</div>
+      <div className="malu-lp__announcement">O segredo das top afiliadas revelado!</div>
 
       <section className="malu-lp-hero">
         <div className="malu-lp-container malu-lp-hero__content">
-          <img className="malu-lp-logo" src={malu.logoUrl} alt="Malu" />
-          <h1>Conteúdos que ajudam você a <em>vender todos os dias.</em></h1>
-          <p>Conheça a Malu: ela separa os melhores criativos, organiza sua rotina e deixa tudo pronto para você publicar.</p>
+          <div className="malu-lp-shopee"><img src={malu.channels[0].logoUrl} alt="" /> Shopee</div>
+          <h1>Veja agora a <mark>Inteligência Artificial</mark> que trabalha por você</h1>
+          <p>Assista ao vídeo abaixo para entender como a Malu simplifica a sua rotina.</p>
 
           <div className="malu-lp-hero__video" role="img" aria-label="Prévia da Malu em ação">
-            <MiniPhone image={malu.homeImageUrl} label="Tela inicial da Malu" />
-            <button className="malu-lp-play" type="button" aria-label="Reproduzir apresentação">
-              <Play size={23} fill="currentColor" />
-            </button>
+            <div className="malu-lp-video-resume">
+              <b>Conheça a Malu por dentro</b>
+              <button type="button"><Play size={16} fill="currentColor" /> Continuar assistindo</button>
+              <button type="button"><Play size={16} /> Assistir do início</button>
+            </div>
           </div>
           <a className="malu-lp-scroll" href="#recursos">conheça por dentro <span>↓</span></a>
         </div>
@@ -85,10 +83,14 @@ export default function MaluLanding() {
                 <h3>Escolha seu nicho. A Malu organiza o resto.</h3>
                 <p>Selecione a quantidade de vídeos e receba uma rotina com os melhores horários para publicar.</p>
               </div>
-              <div className="malu-lp-routine-preview">
-                <div><span className="malu-lp-dot" /> Nicho: Casa e decoração <b>✓</b></div>
-                <div><Clock3 size={14} /> 3 vídeos · hoje, 18:40</div>
-                <div><Clock3 size={14} /> 5 vídeos · amanhã, 09:15</div>
+              <div className="malu-lp-feature-screen">
+                <MiniPhone image={malu.homeImageUrl} label="Painel da Malu" />
+                <div className="malu-lp-feature-screen__side">
+                  <span>Rotina de hoje</span><b>3 conteúdos</b>
+                  <small><Check size={12} /> vídeos prontos</small>
+                  <small><Check size={12} /> horários sugeridos</small>
+                  <small><Check size={12} /> legenda e hashtags</small>
+                </div>
               </div>
             </article>
 
@@ -145,6 +147,7 @@ export default function MaluLanding() {
           <div className="malu-lp-testimonial-stage">
             <div className="malu-lp-testimonial-phone">
               <img src={malu.editingImageUrl} alt="Criativo organizado pela Malu" />
+              <button className="malu-lp-testimonial-play" type="button"><Play size={22} fill="currentColor" /></button>
               <div><span>Rotina criada</span><b>Conteúdo pronto para postar</b></div>
             </div>
             <div className="malu-lp-audios">
@@ -158,6 +161,16 @@ export default function MaluLanding() {
             </div>
           </div>
           <div className="malu-lp-center"><CtaButton dark>QUERO COMEÇAR MINHA ROTINA</CtaButton></div>
+        </div>
+      </section>
+
+      <section className="malu-lp-section malu-lp-section--cream malu-lp-affiliate-proof">
+        <div className="malu-lp-container malu-lp-affiliate-proof__content">
+          <div className="malu-lp-profile-card"><span>●</span><div><b>Afiliadas que usam a Malu</b><small>Conteúdo organizado todos os dias</small></div></div>
+          <div className="malu-lp-section-heading"><span>CONHEÇA A ROTINA POR TRÁS DA MALU</span><h2>O que deixa tudo tão <em>simples.</em></h2></div>
+          <p>Quando sua rotina fica organizada, postar deixa de ser uma tarefa pesada. A Malu reúne os materiais que fazem sentido para você e mostra um caminho claro para continuar com consistência.</p>
+          <p>Hoje, ela cuida da parte mais trabalhosa: encontrar conteúdos, formatos e ideias para a sua próxima postagem.</p>
+          <CtaButton>QUERO CONHECER A MALU</CtaButton>
         </div>
       </section>
 
@@ -183,8 +196,8 @@ export default function MaluLanding() {
             <ul>
               {["Vídeos prontos em diversos nichos", "Packs de stories e carrosséis", "Legendas, hashtags e horários sugeridos", "Produtos em alta para inspirar seus posts", "Suporte para tirar dúvidas"].map((item) => <li key={item}><Check size={16} />{item}</li>)}
             </ul>
-            <p className="malu-lp-offer__note">As condições de acesso são exibidas na próxima etapa.</p>
-            <a className="malu-lp-offer__button" href="#faq">LIBERAR MEU ACESSO <ArrowRight size={16} /></a>
+            <div className="malu-lp-price"><small>por apenas</small><b>R$27,90</b></div>
+            <a className="malu-lp-offer__button" href="#faq">COMPRAR AGORA <ArrowRight size={16} /></a>
           </div>
         </div>
       </section>
