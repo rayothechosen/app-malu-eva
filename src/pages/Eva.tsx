@@ -407,8 +407,8 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
 
 // O checkout será preenchido assim que os links de pagamento forem definidos.
 const INTEGRATION_CHECKOUT_URL: Record<BrandId, string> = {
-  eva: "https://checkout.perfectpay.com.br/pay/PPU38CQF3I8",
-  malu: "https://checkout.perfectpay.com.br/pay/PPU38CQF3IH",
+  eva: "https://checkout.perfectpay.com.br/pay/PPU38CQF7CM",
+  malu: "https://checkout.perfectpay.com.br/pay/PPU38CQF7CJ",
 };
 const REFUND_WEBHOOK_URL = "https://n8n.afiliadasbrasil.com/webhook/642881a3-2ad5-473e-9a7d-1eaa8bd1ee78";
 
