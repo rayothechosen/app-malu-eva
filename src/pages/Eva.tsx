@@ -19,6 +19,7 @@ import {
 import { getBrandTheme, type BrandId, type BrandTheme } from "@/lib/brandTheme";
 
 const EvaFlow = lazy(() => import("@/components/EvaFlow"));
+const MaluPreflightFlow = lazy(() => import("@/components/EvaFlow").then((module) => ({ default: module.MaluPreflightFlow })));
 
 // ─── Paleta (Craft × Wise: neutros quentes + roxo vívido/lima do crachá) ─────
 const P        = "var(--brand-primary)";
@@ -156,7 +157,7 @@ interface VideoItem  { message_id:string; nicho:string; link_video:string|null; 
 interface NichoRow   { nicho:string; total:number; }
 interface CreativeAsset { id:string; creative_set_id:string; position:number; image_url:string; r2_key:string|null; original_filename:string|null; created_at:string; }
 interface CreativeSet { id:string; type:"story"|"carousel"; category:string|null; product_url:string|null; product_name:string|null; r2_folder:string|null; is_active:boolean; created_at:string; creative_assets:CreativeAsset[]; }
-interface IntegrationStatus { checkout_clicked_at?: string; proof_filename?: string; proof_size?: number; activated_at?: string; }
+interface IntegrationStatus { preflight_completed_at?: string; checkout_clicked_at?: string; proof_filename?: string; proof_size?: number; activated_at?: string; }
 
 type TempoId = "24h" | "36h" | "48h";
 
@@ -444,11 +445,9 @@ async function saveIntegrationStatus(brand: BrandId, update: IntegrationStatus) 
   return next;
 }
 
-function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusChange, onActivated }: {
+function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
   theme: BrandTheme;
   status: IntegrationStatus;
-  onClose:()=>void;
-  onRequestRefund:()=>void;
   onStatusChange:(status: IntegrationStatus)=>void;
   onActivated:(status: IntegrationStatus)=>void;
 }) {
@@ -496,17 +495,15 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
   if (paymentStarted) {
     return (
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5"
-        onClick={onClose}>
+        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
         <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
-          transition={{ type:"spring", damping:25, stiffness:260 }} onClick={(event) => event.stopPropagation()}
+          transition={{ type:"spring", damping:25, stiffness:260 }}
           className="w-full max-w-md rounded-[1.75rem] bg-white p-5 sm:p-6" style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">Pagamento iniciado</p>
               <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">Já fez o pagamento?<br /><em className="italic" style={{ color:P }}>Anexe o comprovante.</em></h2>
             </div>
-            <button onClick={onClose} aria-label="Fechar" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground/55"><X className="h-4 w-4" /></button>
           </div>
 
           <div className="mt-5 rounded-2xl border border-black/[0.08] p-3.5">
@@ -516,7 +513,7 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
           </div>
           <button onClick={confirmProof} disabled={!proof || busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {busy ? "Confirmando..." : "Confirmar e liberar post automático"}
+            {busy ? "Confirmando..." : "Confirmar e liberar planejador de rotinas"}
           </button>
           <button onClick={startPayment} disabled={busy} className="mt-4 w-full text-center text-[11px] font-extrabold underline underline-offset-2 disabled:opacity-50" style={{ color:P }}>
             Ainda não fez o pagamento? Faça por aqui
@@ -529,11 +526,9 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
 
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5"
-      onClick={onClose}>
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
       <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
         transition={{ type:"spring", damping:25, stiffness:260 }}
-        onClick={(event) => event.stopPropagation()}
         className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[1.75rem] bg-white p-5 sm:p-6"
         style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
         <div className="flex items-start justify-between gap-4">
@@ -543,9 +538,6 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
               {paymentStarted ? <>Já fez o pagamento?<br /><em className="italic" style={{ color:P }}>Anexe o comprovante.</em></> : <>Libere a {theme.name}<br /><em className="italic" style={{ color:P }}>para trabalhar no automático.</em></>}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Fechar" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground/55">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {!paymentStarted && <>
@@ -597,7 +589,7 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
           </div>
           <button onClick={confirmProof} disabled={!proof || busy} className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {busy ? "Confirmando..." : "Confirmar e liberar post automático"}
+            {busy ? "Confirmando..." : "Confirmar e liberar planejador de rotinas"}
           </button>
           <button onClick={startPayment} disabled={busy} className="w-full text-center text-[11px] font-extrabold underline underline-offset-2 disabled:opacity-50" style={{ color:P }}>
             Ainda não fez o pagamento? Faça por aqui
@@ -610,7 +602,6 @@ function IntegrationModal({ theme, status, onClose, onRequestRefund, onStatusCha
 
         {!paymentStarted && <div className="mt-5 border-t border-black/[0.07] pt-4 text-center">
           <p className="text-[11px] leading-relaxed text-foreground/55">Os packs continuam disponíveis mesmo sem ativar a integração.</p>
-          <button onClick={onRequestRefund} className="mt-2 text-[11px] font-extrabold underline underline-offset-2" style={{ color:P }}>Realizar pedido de reembolso</button>
         </div>}
       </motion.div>
     </motion.div>
@@ -1981,10 +1972,12 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
     navigate(next ? `${basePath}/${next}` : homePath);
   }
   function goHome() { nav("home"); }
-  function requestRefund() {
-    setIntegrationOpen(false);
-    window.setTimeout(() => document.getElementById("reembolso")?.scrollIntoView({ behavior:"smooth", block:"start" }), 120);
-  }
+
+  useEffect(() => {
+    if (brand === "malu" && screen === "destrava" && integrationStatus.preflight_completed_at && !integrationStatus.activated_at) {
+      setIntegrationOpen(true);
+    }
+  }, [brand, screen, integrationStatus.preflight_completed_at, integrationStatus.activated_at]);
 
   function startAutomatic() {
     if (refundRequested) {
@@ -1992,7 +1985,18 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
       return;
     }
     if (integrationStatus.activated_at) nav("destrava");
+    else if (brand === "malu") nav("destrava");
     else setIntegrationOpen(true);
+  }
+
+  async function openIntegrationAfterDemo() {
+    try {
+      const next = await saveIntegrationStatus(theme.id, { preflight_completed_at: new Date().toISOString() });
+      setIntegrationStatus(next);
+      setIntegrationOpen(true);
+    } catch {
+      setIntegrationOpen(true);
+    }
   }
 
   function criarLiveComProduto(produto: Produto) {
@@ -2020,7 +2024,9 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
       {screen === "destrava" && !refundRequested && (
         <motion.div key="destrava" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={PAGE_BG}><EvaLoader label={`Carregando a ${theme.name}...`} /></div>}>
-            <EvaFlow produtos={fluxoProdutos} onExit={goHome} theme={theme} />
+            {brand === "malu" && !integrationStatus.activated_at
+              ? <MaluPreflightFlow produtos={fluxoProdutos} theme={theme} onExit={goHome} onConnect={() => void openIntegrationAfterDemo()} resumeAtReview={Boolean(integrationStatus.preflight_completed_at)} />
+              : <EvaFlow produtos={fluxoProdutos} onExit={goHome} theme={theme} />}
           </Suspense>
         </motion.div>
       )}
@@ -2049,8 +2055,6 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
       {integrationOpen && <IntegrationModal
         theme={theme}
         status={integrationStatus}
-        onClose={() => setIntegrationOpen(false)}
-        onRequestRefund={requestRefund}
         onStatusChange={setIntegrationStatus}
         onActivated={(status) => { setIntegrationStatus(status); setIntegrationOpen(false); nav("destrava"); }}
       />}

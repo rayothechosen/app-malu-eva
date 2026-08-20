@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Check, ChevronRight, Play, Zap, Loader2, X, Clock,
-  RefreshCw, Shuffle, Captions, Mic, Scissors, Search, Wand2,
+  Captions, Mic, Scissors, Search, Wand2,
   Copy, Download, CalendarDays,
 } from "lucide-react";
 import { NichoIcon, EvaLoader, Starburst, type NichoTipo } from "@/components/EvaIcons";
@@ -23,6 +23,7 @@ const R2_EVA       = "https://pub-0b252875d435478a830daa595535d16c.r2.dev";
 
 export interface ProdutoLite {
   id: string; nome: string; preco: string; comissao: string; img: string; badge: string;
+  vendasHoje?: string; comissoesHoje?: string; motivo?: string;
 }
 
 interface VideoRow {
@@ -301,14 +302,14 @@ function FaseProdutos({ produtos, sel, setSel, onNext, onBack }: {
       <div className="max-w-md mx-auto">
         <TopBar step={1} label="Produto" onBack={onBack} />
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="px-5 pb-28">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-foreground/40 uppercase mb-3">Oportunidades encontradas</p>
+          <p className="text-[10px] font-bold tracking-[0.18em] text-foreground/40 uppercase mb-3">Ranking atualizado hoje</p>
           <h2 className="font-extrabold text-[1.7rem] leading-[1.15] tracking-tight">
-            Melhores produtos<br /><em className="italic" style={{ color: P }}>para você vender</em>
+            Top 3 produtos<br /><em className="italic" style={{ color: P }}>mais vendidos hoje</em>
           </h2>
           <p className="text-foreground/50 text-[12px] mt-3 mb-5">
-            Escolha uma das seis imagens da escova a vapor para pets.
+            Escolha um dos três produtos mais vendidos de hoje.
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {produtos.map((p, i) => {
               const isSel = sel === p.id;
               return (
@@ -317,7 +318,7 @@ function FaseProdutos({ produtos, sel, setSel, onNext, onBack }: {
                   animate={{ opacity: 1, y: 0, scale: isSel ? 1.02 : 1 }}
                   whileTap={{ scale: 0.96 }}
                   transition={{ delay: 0.04 * i }}
-                  className="relative bg-white rounded-[1.4rem] overflow-hidden cursor-pointer"
+                  className="relative flex gap-3 bg-white rounded-[1.4rem] overflow-hidden cursor-pointer p-2.5"
                   style={{
                     border: isSel ? `1.5px solid ${P}` : CARD_EDGE,
                     boxShadow: isSel ? "0 12px 28px rgba(122,43,245,0.28)" : "0 4px 12px rgba(22,19,14,0.06)",
@@ -330,7 +331,19 @@ function FaseProdutos({ produtos, sel, setSel, onNext, onBack }: {
                       <Check className="w-4 h-4" strokeWidth={3.5} style={{ color: INK }} />
                     </motion.div>
                   )}
-                  <img src={p.img} alt="" className="w-full block" />
+                  <div className="relative w-[42%] shrink-0 overflow-hidden rounded-xl bg-black/[0.03]">
+                    <img src={p.img} alt="" className="h-full w-full object-contain" />
+                    <span className="absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: i === 0 ? P : i === 1 ? CARD_DARK : "#D9A36A" }}>#{i + 1}</span>
+                  </div>
+                  <div className="min-w-0 flex-1 py-2 pr-1">
+                    <p className="text-[8px] font-extrabold uppercase tracking-[.12em]" style={{ color: P }}>Top {i + 1} do dia</p>
+                    <h3 className="mt-1 text-[12px] font-extrabold leading-tight">Por que está no Top {i + 1}?</h3>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(249,115,22,.10)" }}><span className="block text-[7px] font-bold uppercase text-foreground/40">Vendas hoje</span><b className="text-[10px]" style={{ color: P }}>{p.vendasHoje ?? `${(847 - i * 119).toLocaleString("pt-BR")} vendas`}</b></div>
+                      <div className="rounded-lg px-2 py-1.5" style={{ background: "rgba(77,124,15,.09)" }}><span className="block text-[7px] font-bold uppercase text-foreground/40">Comissões hoje</span><b className="text-[10px] text-[#4d7c0f]">{p.comissoesHoje ?? "R$ 2,1 mil"}</b></div>
+                    </div>
+                    <p className="mt-2 text-[8.5px] leading-snug text-foreground/55">{p.motivo ?? "Produto com forte procura e boa conversão no nicho hoje."}</p>
+                  </div>
                 </motion.div>
               );
             })}
@@ -432,7 +445,7 @@ function FaseConfig({ qtd, setQtd, formato, setFormato, onNext, onBack, brandNam
           </h2>
           <p className="text-foreground/50 text-[12px] mt-3">Nesta demonstração, os três vídeos pet são sempre utilizados, independentemente da quantidade selecionada.</p>
           <div className="grid grid-cols-3 gap-3 mt-5 mb-7">
-            {[3, 5, 10].map((n, i) => {
+            {[3, 5, 7].map((n, i) => {
               const sel = qtd === n;
               return (
                 <motion.div key={n} onClick={() => setQtd(n)}
@@ -759,29 +772,15 @@ function FaseStudio({ produto, pool, onDone, editingImageUrl, brandName }: {
 
 // ─── Fase 7: Revisão e postagem ──────────────────────────────────────────────
 
-function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, channels }: {
-  produto: ProdutoLite; videos: VideoRow[]; extras: VideoRow[];
+function FaseRevisao({ produto, videos, onBack, onTrocar, brandName, channels }: {
+  produto: ProdutoLite; videos: VideoRow[];
   onBack: () => void; onTrocar: () => void; brandName: string; channels: BrandTheme["channels"];
 }) {
   const [lista, setLista] = useState(videos);
-  const [regen, setRegen] = useState<{ i: number; label: string } | null>(null);
   const [modalUrl, setModalUrl] = useState<string | null>(null);
-  const [postando, setPostando] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState(() => channels.map(channel => channel.name));
-  const extraRef = useRef(0);
 
   const dur = useMemo(() => lista.map((_, i) => [17, 21, 33][i] ?? 20), [lista]);
-
-  function refazer(i: number, label: string) {
-    if (regen !== null) return;
-    setRegen({ i, label });
-    setTimeout(() => {
-      const next = extras[extraRef.current % Math.max(1, extras.length)];
-      extraRef.current++;
-      if (next) setLista(l => l.map((v, j) => (j === i ? next : v)));
-      setRegen(null);
-    }, 1300);
-  }
 
   function toggleChannel(name: string) {
     setSelectedChannels(current => current.includes(name)
@@ -799,7 +798,7 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
             Revise os vídeos<br /><em className="italic" style={{ color: P }}>criados pela {brandName}</em>
           </h2>
           <p className="text-foreground/50 text-[12px] mt-3 mb-5">
-            Tudo pronto. Aprove para a {brandName} publicar nos seus canais com o produto vinculado.
+            Tudo pronto. Conecte suas redes sociais para liberar o planejador de rotinas.
           </p>
 
           <div className="space-y-3.5">
@@ -812,13 +811,7 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
                   <div className="relative w-[86px] h-[150px] rounded-xl overflow-hidden shrink-0 cursor-pointer"
                     style={{ background: "#0A0A0A" }}
                     onClick={() => v.link_video && setModalUrl(v.link_video)}>
-                    {regen?.i === i ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                        <Loader2 className="w-5 h-5 animate-spin" style={{ color: LIME }} />
-                        <span className="text-[8px] font-bold text-white/60 text-center px-1">{regen.label}</span>
-                      </div>
-                    ) : (
-                      <>
+                    <>
                         {v.link_video && (
                           <video key={v.message_id} src={v.link_video} muted playsInline preload="metadata"
                             onLoadedMetadata={(e) => { (e.target as HTMLVideoElement).currentTime = 0.1; }}
@@ -832,8 +825,7 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
                         <span className="absolute top-1.5 right-1.5 text-[8.5px] font-extrabold text-white bg-black/55 px-1.5 py-0.5 rounded-full">
                           {dur[i]}s
                         </span>
-                      </>
-                    )}
+                    </>
                   </div>
                   {/* Infos */}
                   <div className="flex-1 min-w-0">
@@ -847,18 +839,6 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
                       <p className="text-[9px] font-semibold leading-snug" style={{ color: "#4d7c0f" }}>
                         Materiais verificados: sem direitos autorais e liberados para publicação.
                       </p>
-                    </div>
-                    <div className="flex gap-1.5 mt-2.5">
-                      <button onClick={() => refazer(i, "gerando...")}
-                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[9.5px] font-bold active:scale-95 transition-transform"
-                        style={{ background: "rgba(22,19,14,0.06)", color: INK }}>
-                        <RefreshCw className="w-3 h-3" /> Nova versão
-                      </button>
-                      <button onClick={() => refazer(i, "novo estilo...")}
-                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[9.5px] font-bold active:scale-95 transition-transform"
-                        style={{ background: "rgba(122,43,245,0.08)", color: P }}>
-                        <Shuffle className="w-3 h-3" /> Trocar estilo
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -893,8 +873,8 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
         <div className="fixed bottom-0 left-0 right-0 px-5 pb-5 pt-8 pointer-events-none"
           style={{ background: "linear-gradient(180deg, transparent 0%, #F4EFE6 55%)" }}>
           <div className="max-w-md mx-auto pointer-events-auto">
-            <BtnLime onClick={() => setPostando(true)} disabled={selectedChannels.length === 0}>
-              <ChannelDots channels={channels} selected={selectedChannels} size={13} /> Aprovar e postar
+            <BtnLime onClick={onTrocar} disabled={selectedChannels.length === 0}>
+              <ChannelDots channels={channels} selected={selectedChannels} size={13} /> Conectar minhas redes sociais
             </BtnLime>
           </div>
         </div>
@@ -902,14 +882,50 @@ function FaseRevisao({ produto, videos, extras, onBack, onTrocar, brandName, cha
 
       <AnimatePresence>
         {modalUrl && <VideoModal url={modalUrl} onClose={() => setModalUrl(null)} />}
-        {postando && <PopupTikTok videos={lista} onDone={onTrocar} brandName={brandName}
-          channels={channels} selectedChannels={selectedChannels} />}
       </AnimatePresence>
     </div>
   );
 }
 
 // ─── Popup do TikTok (postagem) ──────────────────────────────────────────────
+
+type PreflightPhase = "nicho" | "pesquisa" | "produtos" | "config" | "studio" | "revisao";
+
+export function MaluPreflightFlow({ produtos, theme, onExit, onConnect, resumeAtReview = false }: {
+  produtos: ProdutoLite[];
+  theme: BrandTheme;
+  onExit: () => void;
+  onConnect: () => void;
+  resumeAtReview?: boolean;
+}) {
+  const ranking = useMemo(() => produtos.slice(0, 3).map((produto, index) => ({
+    ...produto,
+    vendasHoje: ["1.847 vendas", "284 vendas", "176 vendas"][index],
+    comissoesHoje: ["R$ 21,5 mil", "R$ 3,4 mil", "R$ 2,1 mil"][index],
+    motivo: [
+      "Lidera o nicho em vendas hoje e tem o maior volume da categoria.",
+      "O preço competitivo aumentou a conversão e garantiu a segunda posição.",
+      "A procura constante mantém este produto entre os destaques do dia.",
+    ][index],
+  })), [produtos]);
+  const [phase, setPhase] = useState<PreflightPhase>(resumeAtReview ? "revisao" : "nicho");
+  const [nicho, setNicho] = useState("moda");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(ranking[0]?.id ?? null);
+  const [quantity, setQuantity] = useState(3);
+  const [format, setFormat] = useState("auto");
+  const produto = ranking.find(item => item.id === selectedProduct) ?? ranking[0];
+
+  if (!produto) return null;
+
+  return <AnimatePresence mode="wait">
+    {phase === "nicho" && <motion.div key="nicho" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseNicho nicho={nicho} setNicho={setNicho} brandName={theme.name} onBack={onExit} onNext={() => setPhase("pesquisa")} /></motion.div>}
+    {phase === "pesquisa" && <FasePesquisa key="pesquisa" brandName={theme.name} searchImageUrl={theme.searchImageUrl} onDone={() => setPhase("produtos")} />}
+    {phase === "produtos" && <motion.div key="produtos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseProdutos produtos={ranking} sel={selectedProduct} setSel={setSelectedProduct} onBack={() => setPhase("nicho")} onNext={() => setPhase("config")} /></motion.div>}
+    {phase === "config" && <motion.div key="config" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseConfig qtd={quantity} setQtd={setQuantity} formato={format} setFormato={setFormat} brandName={theme.name} onBack={() => setPhase("produtos")} onNext={() => setPhase("studio")} /></motion.div>}
+    {phase === "studio" && <FaseStudio key="studio" produto={produto} pool={DEMO_VIDEOS} editingImageUrl={theme.editingImageUrl} brandName={theme.name} onDone={() => setPhase("revisao")} />}
+    {phase === "revisao" && <motion.div key="revisao" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseRevisao produto={produto} videos={DEMO_VIDEOS.slice(0, quantity)} brandName={theme.name} channels={theme.channels} onBack={() => setPhase("config")} onTrocar={onConnect} /></motion.div>}
+  </AnimatePresence>;
+}
 
 const HORARIOS_PICO = [
   { hora: "19:30", dia: "hoje",    motivo: "pico de audiência do seu nicho" },
