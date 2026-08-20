@@ -619,8 +619,10 @@ function FaseStudio({ produto, pool, onDone, editingImageUrl, brandName }: {
     if (stepIdx >= totalSteps) {
       if (vidIdx + 1 >= videos.length) {
         doneRef.current = true;
-        const t = setTimeout(() => onDone(videos), 900);
-        return () => clearTimeout(t);
+        // Não depende de um temporizador no último render: em alguns navegadores
+        // ele podia ser cancelado quando a prévia de vídeo terminava em 100%.
+        onDone(videos);
+        return;
       }
       const t = setTimeout(() => { setVidIdx(v => v + 1); setStepIdx(0); }, 420);
       return () => clearTimeout(t);
