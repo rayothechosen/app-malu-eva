@@ -2025,7 +2025,7 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
         <motion.div key="destrava" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={PAGE_BG}><EvaLoader label={`Carregando a ${theme.name}...`} /></div>}>
             {brand === "malu" && !integrationStatus.activated_at
-              ? <MaluPreflightFlow produtos={fluxoProdutos} theme={theme} onExit={goHome} onConnect={() => void openIntegrationAfterDemo()} resumeAtReview={Boolean(integrationStatus.preflight_completed_at)} />
+              ? <MaluPreflightFlow theme={theme} onExit={goHome} onConnect={() => void openIntegrationAfterDemo()} resumeAtReview={Boolean(integrationStatus.preflight_completed_at)} />
               : <EvaFlow produtos={fluxoProdutos} onExit={goHome} theme={theme} />}
           </Suspense>
         </motion.div>

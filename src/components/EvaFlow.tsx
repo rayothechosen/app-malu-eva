@@ -182,12 +182,87 @@ const DEMO_VIDEOS: VideoRow[] = [
   { message_id: "ppet03", nicho: "05 - Pets", link_video: `${R2_EVA}/ppet03.mp4` },
 ];
 
+// Catálogo exclusivo do demonstrativo da Malu. Cada produto possui sete MP4
+// próprios; as legendas são aplicadas depois do sorteio, nunca pelo nome do arquivo.
+const MALU_FLOW_BASE = "https://pub-cb414c95ac474ad58b42a6e89390fd35.r2.dev";
+
+interface MaluFlowProduct extends ProdutoLite {
+  prefix: string;
+  niche: string;
+  hashtags: string;
+  benefit: string;
+  audience: string;
+}
+
+const MALU_PREFLIGHT_NICHOS: { id: string; label: string; tipo: NichoTipo }[] = [
+  { id: "moda", label: "Moda e beleza", tipo: "camiseta" },
+  { id: "casa", label: "Casa e decoração", tipo: "panela" },
+  { id: "maternidade", label: "Maternidade e infantil", tipo: "mamadeira" },
+  { id: "pet", label: "Pets", tipo: "pata" },
+  { id: "auto", label: "A Malu escolhe", tipo: "play" },
+];
+
+const MALU_FLOW_CATALOG: Record<string, MaluFlowProduct[]> = {
+  moda: [
+    { id: "modaebeleza03", prefix: "modaebeleza03", niche: "Moda e beleza", nome: "Óculos de sol oval feminino", preco: "R$ 77,90", comissao: "R$ 21,5 mil", badge: "TOP 1", img: `${MALU_FLOW_BASE}/modaebeleza03.png`, vendasHoje: "1.847 vendas", comissoesHoje: "R$ 21,5 mil", motivo: "Lidera o nicho em vendas hoje e tem o maior volume total da categoria.", hashtags: "#oculosdesol #modafeminina #achadinhos #shopee #afiliadoshopee", benefit: "esse modelo transforma qualquer look em segundos", audience: "quem ama moda e acessórios estilosos" },
+    { id: "modaebeleza02", prefix: "modaebeleza02", niche: "Moda e beleza", nome: "Anel feminino em prata 925", preco: "R$ 14,20", comissao: "R$ 3,4 mil", badge: "TOP 2", img: `${MALU_FLOW_BASE}/modaebeleza02.png`, vendasHoje: "284 vendas", comissoesHoje: "R$ 3,4 mil", motivo: "O preço baixo aumentou a conversão e colocou o anel na segunda posição.", hashtags: "#anel #prata925 #modafeminina #achadinhos #shopee", benefit: "esse anel deixa o visual mais delicado e elegante", audience: "quem procura um acessório bonito para usar ou presentear" },
+    { id: "modaebeleza01", prefix: "modaebeleza01", niche: "Moda e beleza", nome: "Pantufa feminina forrada", preco: "R$ 79,00", comissao: "R$ 2,1 mil", badge: "TOP 3", img: `${MALU_FLOW_BASE}/modaebeleza01.png`, vendasHoje: "176 vendas", comissoesHoje: "R$ 2,1 mil", motivo: "A procura por produtos de inverno mantém a pantufa entre os destaques do dia.", hashtags: "#pantufa #inverno #modafeminina #achadinhos #shopee", benefit: "essa pantufa mantém os pés quentinhos e confortáveis", audience: "quem quer conforto nos dias mais frios" },
+  ],
+  casa: [
+    { id: "casa02", prefix: "casa02", niche: "Casa e decoração", nome: "Kit com 10 cabeceiras de cama", preco: "R$ 32,89", comissao: "R$ 33,7 mil", badge: "TOP 1", img: `${MALU_FLOW_BASE}/casa02.png`, vendasHoje: "6.842 vendas", comissoesHoje: "R$ 33,7 mil", motivo: "É o campeão do nicho, com o maior volume total e mais vendas registradas hoje.", hashtags: "#cabeceira #decoracao #quartodecorado #achadinhos #shopee", benefit: "essas peças renovam o quarto sem obra e sem complicação", audience: "quem quer transformar o quarto gastando pouco" },
+    { id: "casa01", prefix: "casa01", niche: "Casa e decoração", nome: "Relógio despertador digital", preco: "R$ 32,98", comissao: "R$ 16,9 mil", badge: "TOP 2", img: `${MALU_FLOW_BASE}/casa01.png`, vendasHoje: "3.418 vendas", comissoesHoje: "R$ 16,9 mil", motivo: "Mantém uma procura forte e constante, garantindo a segunda posição no ranking.", hashtags: "#relogiodigital #decoracao #casa #achadinhos #shopee", benefit: "o horário fica fácil de enxergar até de longe", audience: "quem gosta de um quarto moderno e organizado" },
+    { id: "casa03", prefix: "casa03", niche: "Casa e decoração", nome: "Capa almofadada para assento sanitário", preco: "R$ 14,99", comissao: "R$ 4,7 mil", badge: "TOP 3", img: `${MALU_FLOW_BASE}/casa03.png`, vendasHoje: "2.107 vendas", comissoesHoje: "R$ 4,7 mil", motivo: "O preço acessível e a utilidade diária mantêm o produto entre os três melhores.", hashtags: "#banheiro #utilidades #casa #achadinhos #shopee", benefit: "essa capa deixa o assento mais confortável e protegido", audience: "quem busca mais conforto e praticidade no banheiro" },
+  ],
+  maternidade: [
+    { id: "maternidade03", prefix: "maternidade03", niche: "Maternidade e infantil", nome: "Brinquedo caranguejo musical", preco: "R$ 28,38", comissao: "R$ 29,8 mil", badge: "TOP 1", img: `${MALU_FLOW_BASE}/maternidade03.png`, vendasHoje: "4.921 vendas", comissoesHoje: "R$ 29,8 mil", motivo: "O apelo visual e o alto volume de vendas colocam o brinquedo no topo do nicho.", hashtags: "#brinquedoinfantil #bebe #maternidade #achadinhos #shopee", benefit: "o caranguejo prende a atenção do bebê com luzes, sons e movimento", audience: "famílias que querem estimular e divertir os pequenos" },
+    { id: "maternidade01", prefix: "maternidade01", niche: "Maternidade e infantil", nome: "Saco de dormir para bebê", preco: "R$ 38,90", comissao: "R$ 21,6 mil", badge: "TOP 2", img: `${MALU_FLOW_BASE}/maternidade01.png`, vendasHoje: "3.714 vendas", comissoesHoje: "R$ 21,6 mil", motivo: "A combinação de conforto e segurança mantém o produto na segunda posição.", hashtags: "#sacodedormir #bebe #maternidade #achadinhos #shopee", benefit: "o bebê fica aquecido e confortável sem cobertas soltas", audience: "mães que querem noites mais tranquilas e seguras" },
+    { id: "maternidade02", prefix: "maternidade02", niche: "Maternidade e infantil", nome: "Casinha de boneca em MDF", preco: "R$ 58,50", comissao: "R$ 19,3 mil", badge: "TOP 3", img: `${MALU_FLOW_BASE}/maternidade02.png`, vendasHoje: "2.206 vendas", comissoesHoje: "R$ 19,3 mil", motivo: "O ticket mais alto gera boa comissão e mantém a casinha dentro do Top 3.", hashtags: "#casinhadeboneca #brinquedo #infantil #achadinhos #shopee", benefit: "essa casinha transforma a brincadeira em um mundo de imaginação", audience: "crianças que amam brincar e criar histórias" },
+  ],
+  pet: [
+    { id: "pets02", prefix: "pets02", niche: "Pets", nome: "Coleira guia retrátil para pets", preco: "R$ 15,99", comissao: "R$ 12,8 mil", badge: "TOP 1", img: `${MALU_FLOW_BASE}/pets02.png`, vendasHoje: "2.846 vendas", comissoesHoje: "R$ 12,8 mil", motivo: "Tem o maior volume de vendas do nicho e lidera o ranking de hoje.", hashtags: "#pet #pets #achadinhopet #shopee #afiliadoshopee", benefit: "a guia dá mais liberdade ao pet sem perder o controle do passeio", audience: "tutores que querem passeios mais práticos e seguros" },
+    { id: "pets01", prefix: "pets01", niche: "Pets", nome: "Túnel labirinto para pets", preco: "R$ 22,47", comissao: "R$ 8,5 mil", badge: "TOP 2", img: `${MALU_FLOW_BASE}/pets01.png`, vendasHoje: "1.634 vendas", comissoesHoje: "R$ 8,5 mil", motivo: "O forte interesse de tutores de gatos garante a segunda posição do dia.", hashtags: "#pet #pets #achadinhopet #shopee #afiliadoshopee", benefit: "o túnel mantém gatos e pequenos pets entretidos por muito mais tempo", audience: "tutores que querem enriquecer a rotina dos animais" },
+    { id: "pets03", prefix: "pets03", niche: "Pets", nome: "Mochila panorâmica para cães e gatos", preco: "R$ 92,63", comissao: "R$ 6,7 mil", badge: "TOP 3", img: `${MALU_FLOW_BASE}/pets03.png`, vendasHoje: "487 vendas", comissoesHoje: "R$ 6,7 mil", motivo: "Mesmo com ticket maior, mantém boas vendas e uma comissão atrativa por pedido.", hashtags: "#pet #pets #achadinhopet #shopee #afiliadoshopee", benefit: "a mochila deixa o transporte confortável e permite que o pet veja tudo", audience: "tutores que gostam de levar o pet para todos os lugares" },
+  ],
+};
+
+function shuffleMaluVideos<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+  return result;
+}
+
+function buildMaluVideos(product: MaluFlowProduct, quantity: number): VideoRow[] {
+  const captions = [
+    `${product.nome}: o achadinho que está chamando atenção na Shopee`,
+    `Olha como ${product.benefit}`,
+    `Esse produto é perfeito para ${product.audience}`,
+    "Eu não sabia que precisava disso até ver funcionando",
+    `${product.nome} está entre os produtos mais vendidos do momento`,
+    "Veja esse achadinho em ação antes de escolher o seu",
+    `Salva esse vídeo para não perder: ${product.nome}`,
+  ];
+
+  return shuffleMaluVideos(Array.from({ length: 7 }, (_, index) => ({
+    message_id: `${product.prefix}-video-${String(index + 1).padStart(2, "0")}`,
+    nicho: product.niche,
+    link_video: `${MALU_FLOW_BASE}/${product.prefix}%20video${String(index + 1).padStart(2, "0")}.mp4`,
+  }))).slice(0, quantity).map((video, index) => ({
+    ...video,
+    caption: captions[index],
+    hashtags: product.hashtags,
+  }));
+}
+
 // ─── Fase 1: Nicho ───────────────────────────────────────────────────────────
 
-function FaseNicho({ nicho, setNicho, onNext, onBack, brandName }: {
+function FaseNicho({ nicho, setNicho, onNext, onBack, brandName, niches = NICHOS }: {
   nicho: string; setNicho: (v: string) => void; onNext: () => void; onBack: () => void; brandName: string;
+  niches?: { id: string; label: string; tipo: NichoTipo }[];
 }) {
-  const nichos = NICHOS.map(n => n.id === "auto" ? { ...n, label: `A ${brandName} escolhe` } : n);
+  const nichos = niches.map(n => n.id === "auto" ? { ...n, label: `A ${brandName} escolhe` } : n);
   return (
     <div className="min-h-screen" style={PAGE_BG}>
       <div className="max-w-md mx-auto">
@@ -197,7 +272,7 @@ function FaseNicho({ nicho, setNicho, onNext, onBack, brandName }: {
           <h2 className="font-extrabold text-[1.7rem] leading-[1.15] tracking-tight">
             Qual nicho você<br /><em className="italic" style={{ color: P }}>quer trabalhar?</em>
           </h2>
-          <p className="text-foreground/50 text-[12px] mt-3 mb-5">Neste demonstrativo, os mesmos produtos pet aparecem independentemente do nicho escolhido.</p>
+          <p className="text-foreground/50 text-[12px] mt-3 mb-5">Escolha uma opção e a {brandName} encontra os produtos mais vendidos do dia.</p>
           <div className="grid grid-cols-2 gap-3 mb-6">
             {nichos.map((n, i) => {
               const sel = nicho === n.id;
@@ -237,8 +312,16 @@ function FaseNicho({ nicho, setNicho, onNext, onBack, brandName }: {
 
 // ─── Fase 2: Pesquisa de produtos ────────────────────────────────────────────
 
-function FasePesquisa({ onDone, searchImageUrl, brandName }: { onDone: () => void; searchImageUrl: string; brandName: string }) {
-  const steps = useMemo(() => PESQUISA_STEPS(), []);
+function FasePesquisa({ onDone, searchImageUrl, brandName, nicheLabel = "seu nicho" }: { onDone: () => void; searchImageUrl: string; brandName: string; nicheLabel?: string }) {
+  const steps = useMemo(() => [
+    "Preparando o demonstrativo...",
+    `Analisando os produtos de ${nicheLabel}...`,
+    "Comparando as vendas das últimas 24 horas...",
+    "Separando os três produtos mais vendidos...",
+    "Verificando os vídeos disponíveis...",
+    "Organizando a experiência de edição...",
+    "Tudo pronto para escolher o produto!",
+  ], [nicheLabel]);
   const [idx, setIdx] = useState(0);
   const last = steps.length - 1;
 
@@ -443,7 +526,7 @@ function FaseConfig({ qtd, setQtd, formato, setFormato, onNext, onBack, brandNam
           <h2 className="font-extrabold text-[1.7rem] leading-[1.15] tracking-tight">
             Quantos vídeos<br /><em className="italic" style={{ color: P }}>vamos criar?</em>
           </h2>
-          <p className="text-foreground/50 text-[12px] mt-3">Nesta demonstração, os três vídeos pet são sempre utilizados, independentemente da quantidade selecionada.</p>
+          <p className="text-foreground/50 text-[12px] mt-3">A Malu seleciona vídeos diferentes do produto escolhido para cada rotina.</p>
           <div className="grid grid-cols-3 gap-3 mt-5 mb-7">
             {[3, 5, 7].map((n, i) => {
               const sel = qtd === n;
@@ -520,7 +603,7 @@ function FaseStudio({ produto, pool, onDone, editingImageUrl, brandName }: {
   produto: ProdutoLite; pool: VideoRow[]; editingImageUrl: string; brandName: string;
   onDone: (videos: VideoRow[]) => void;
 }) {
-  const videos = useMemo(() => pool.slice(0, DEMO_VIDEOS.length), [pool]);
+  const videos = useMemo(() => pool, [pool]);
   const [vidIdx, setVidIdx] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
   const doneRef = useRef(false);
@@ -528,7 +611,7 @@ function FaseStudio({ produto, pool, onDone, editingImageUrl, brandName }: {
   const totalSteps = STUDIO_STEPS.length;
   const current = videos[Math.min(vidIdx, videos.length - 1)];
   const fx = STUDIO_STEPS[Math.min(stepIdx, totalSteps - 1)]?.fx;
-  const legenda = LEGENDAS[vidIdx % LEGENDAS.length];
+  const legenda = current?.caption ?? LEGENDAS[vidIdx % LEGENDAS.length];
 
   useEffect(() => {
     if (doneRef.current) return;
@@ -830,9 +913,9 @@ function FaseRevisao({ produto, videos, onBack, onTrocar, brandName, channels }:
                   {/* Infos */}
                   <div className="flex-1 min-w-0">
                     <p className="text-[11.5px] font-bold text-foreground leading-snug line-clamp-2">
-                      {LEGENDAS[i % LEGENDAS.length]}
+                      {v.caption ?? v.legenda ?? LEGENDAS[i % LEGENDAS.length]}
                     </p>
-                    <p className="text-[10px] font-semibold mt-1 line-clamp-1" style={{ color: P }}>{brandName === "Malu" ? HASHTAGS_MALU : HASHTAGS}</p>
+                    <p className="text-[10px] font-semibold mt-1 line-clamp-1" style={{ color: P }}>{Array.isArray(v.hashtags) ? v.hashtags.join(" ") : v.hashtags ?? (brandName === "Malu" ? HASHTAGS_MALU : HASHTAGS)}</p>
                     <div className="flex items-start gap-1.5 mt-2.5 rounded-lg px-2 py-1.5"
                       style={{ background: "rgba(77,124,15,0.08)" }}>
                       <Check className="w-3 h-3 shrink-0 mt-[1px]" strokeWidth={3.5} style={{ color: "#4d7c0f" }} />
@@ -891,39 +974,49 @@ function FaseRevisao({ produto, videos, onBack, onTrocar, brandName, channels }:
 
 type PreflightPhase = "nicho" | "pesquisa" | "produtos" | "config" | "studio" | "revisao";
 
-export function MaluPreflightFlow({ produtos, theme, onExit, onConnect, resumeAtReview = false }: {
-  produtos: ProdutoLite[];
+export function MaluPreflightFlow({ theme, onExit, onConnect, resumeAtReview = false }: {
   theme: BrandTheme;
   onExit: () => void;
   onConnect: () => void;
   resumeAtReview?: boolean;
 }) {
-  const ranking = useMemo(() => produtos.slice(0, 3).map((produto, index) => ({
-    ...produto,
-    vendasHoje: ["1.847 vendas", "284 vendas", "176 vendas"][index],
-    comissoesHoje: ["R$ 21,5 mil", "R$ 3,4 mil", "R$ 2,1 mil"][index],
-    motivo: [
-      "Lidera o nicho em vendas hoje e tem o maior volume da categoria.",
-      "O preço competitivo aumentou a conversão e garantiu a segunda posição.",
-      "A procura constante mantém este produto entre os destaques do dia.",
-    ][index],
-  })), [produtos]);
   const [phase, setPhase] = useState<PreflightPhase>(resumeAtReview ? "revisao" : "nicho");
   const [nicho, setNicho] = useState("moda");
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(ranking[0]?.id ?? null);
+  const [resolvedNiche, setResolvedNiche] = useState("moda");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>("modaebeleza03");
   const [quantity, setQuantity] = useState(3);
   const [format, setFormat] = useState("auto");
+  const [generatedVideos, setGeneratedVideos] = useState<VideoRow[]>(() => buildMaluVideos(MALU_FLOW_CATALOG.moda[0], 3));
+  const ranking = MALU_FLOW_CATALOG[resolvedNiche] ?? MALU_FLOW_CATALOG.moda;
   const produto = ranking.find(item => item.id === selectedProduct) ?? ranking[0];
+  const nicheLabel = MALU_PREFLIGHT_NICHOS.find(item => item.id === resolvedNiche)?.label ?? "seu nicho";
+
+  function startProductSearch() {
+    const realNiches = ["moda", "casa", "maternidade", "pet"];
+    const nextNiche = nicho === "auto"
+      ? realNiches[Math.floor(Math.random() * realNiches.length)]
+      : nicho;
+    const nextRanking = MALU_FLOW_CATALOG[nextNiche] ?? MALU_FLOW_CATALOG.moda;
+    setResolvedNiche(nextNiche);
+    setSelectedProduct(nextRanking[0].id);
+    setPhase("pesquisa");
+  }
+
+  function createVideos() {
+    if (!produto) return;
+    setGeneratedVideos(buildMaluVideos(produto, quantity));
+    setPhase("studio");
+  }
 
   if (!produto) return null;
 
   return <AnimatePresence mode="wait">
-    {phase === "nicho" && <motion.div key="nicho" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseNicho nicho={nicho} setNicho={setNicho} brandName={theme.name} onBack={onExit} onNext={() => setPhase("pesquisa")} /></motion.div>}
-    {phase === "pesquisa" && <FasePesquisa key="pesquisa" brandName={theme.name} searchImageUrl={theme.searchImageUrl} onDone={() => setPhase("produtos")} />}
+    {phase === "nicho" && <motion.div key="nicho" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseNicho niches={MALU_PREFLIGHT_NICHOS} nicho={nicho} setNicho={setNicho} brandName={theme.name} onBack={onExit} onNext={startProductSearch} /></motion.div>}
+    {phase === "pesquisa" && <FasePesquisa key="pesquisa" brandName={theme.name} nicheLabel={nicheLabel} searchImageUrl={theme.searchImageUrl} onDone={() => setPhase("produtos")} />}
     {phase === "produtos" && <motion.div key="produtos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseProdutos produtos={ranking} sel={selectedProduct} setSel={setSelectedProduct} onBack={() => setPhase("nicho")} onNext={() => setPhase("config")} /></motion.div>}
-    {phase === "config" && <motion.div key="config" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseConfig qtd={quantity} setQtd={setQuantity} formato={format} setFormato={setFormat} brandName={theme.name} onBack={() => setPhase("produtos")} onNext={() => setPhase("studio")} /></motion.div>}
-    {phase === "studio" && <FaseStudio key="studio" produto={produto} pool={DEMO_VIDEOS} editingImageUrl={theme.editingImageUrl} brandName={theme.name} onDone={() => setPhase("revisao")} />}
-    {phase === "revisao" && <motion.div key="revisao" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseRevisao produto={produto} videos={DEMO_VIDEOS.slice(0, quantity)} brandName={theme.name} channels={theme.channels} onBack={() => setPhase("config")} onTrocar={onConnect} /></motion.div>}
+    {phase === "config" && <motion.div key="config" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseConfig qtd={quantity} setQtd={setQuantity} formato={format} setFormato={setFormat} brandName={theme.name} onBack={() => setPhase("produtos")} onNext={createVideos} /></motion.div>}
+    {phase === "studio" && <FaseStudio key="studio" produto={produto} pool={generatedVideos} editingImageUrl={theme.editingImageUrl} brandName={theme.name} onDone={(videos) => { setGeneratedVideos(videos); setPhase("revisao"); }} />}
+    {phase === "revisao" && <motion.div key="revisao" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><FaseRevisao produto={produto} videos={generatedVideos} brandName={theme.name} channels={theme.channels} onBack={() => setPhase("config")} onTrocar={onConnect} /></motion.div>}
   </AnimatePresence>;
 }
 
