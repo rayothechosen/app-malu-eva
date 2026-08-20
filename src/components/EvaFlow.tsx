@@ -8,6 +8,7 @@ import {
 import { NichoIcon, EvaLoader, Starburst, type NichoTipo } from "@/components/EvaIcons";
 import type { BrandTheme } from "@/lib/brandTheme";
 import { supabase } from "@/lib/supabaseClient";
+import { getVideoNiches, getVideoPage } from "@/lib/contentCache";
 
 // ─── Tema ────────────────────────────────────────────────────────────────────
 const P         = "var(--brand-primary)";
@@ -1499,6 +1500,7 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
   const [dailyRoutineCounts, setDailyRoutineCounts] = useState<Record<string, DailyRoutineCount>>({});
   const [dailyCountsReady, setDailyCountsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
   void _produtos;
 
   const brandRoutines = routines.filter(routine => routine.brand === theme.id);
@@ -1508,32 +1510,56 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
     : brandRoutines.filter(routine => localDayKey(new Date(routine.created_at)) === todayKey).length;
   const limitReached = routineCountToday >= 3;
 
-  useEffect(() => { let active = true; (async () => { const [{ data: userData }, { data, error: dbError }] = await Promise.all([supabase.auth.getUser(), supabase.rpc("get_nichos_videos")]); if (!active) return; const savedSource = userData.user?.user_metadata?.content_routines; const saved = activeRoutines(savedSource); setRoutines(saved); setRoutinesLoading(false); if (Array.isArray(savedSource) && JSON.stringify(savedSource) !== JSON.stringify(saved)) void supabase.auth.updateUser({ data: { content_routines: saved } }); if (dbError) { setNichesError("Não foi possível carregar os nichos agora. Tente novamente em instantes."); } else { setNiches(((data ?? []) as DatabaseNiche[]).filter(niche => !EXCLUDED_NICHE.test(niche.nicho) && Number(niche.total) > 0)); } setNichesLoading(false); })(); return () => { active = false; }; }, []);
-
   useEffect(() => {
     let active = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    (async () => {
+      const [userResult, nichesResult] = await Promise.allSettled([supabase.auth.getUser(), getVideoNiches()]);
       if (!active) return;
-      const savedCounts = user?.user_metadata?.routine_daily_counts;
-      if (savedCounts && typeof savedCounts === "object" && !Array.isArray(savedCounts)) {
-        setDailyRoutineCounts(savedCounts as Record<string, DailyRoutineCount>);
-        setDailyCountsReady(true);
-        return;
+
+      if (userResult.status === "fulfilled") {
+        const user = userResult.value.data.user;
+        const savedSource = user?.user_metadata?.content_routines;
+        const saved = activeRoutines(savedSource);
+        setRoutines(saved);
+        if (Array.isArray(savedSource) && JSON.stringify(savedSource) !== JSON.stringify(saved)) {
+          void supabase.auth.updateUser({ data: { content_routines: saved } });
+        }
+        const savedCounts = user?.user_metadata?.routine_daily_counts;
+        if (savedCounts && typeof savedCounts === "object" && !Array.isArray(savedCounts)) {
+          setDailyRoutineCounts(savedCounts as Record<string, DailyRoutineCount>);
+        } else {
+          const fallback: Record<string, DailyRoutineCount> = {};
+          for (const routine of saved) {
+            if (localDayKey(new Date(routine.created_at)) !== localDayKey()) continue;
+            const previous = fallback[routine.brand];
+            fallback[routine.brand] = { date: localDayKey(), count: (previous?.count ?? 0) + 1 };
+          }
+          setDailyRoutineCounts(fallback);
+        }
       }
-      const fallback: Record<string, DailyRoutineCount> = {};
-      for (const routine of activeRoutines(user?.user_metadata?.content_routines)) {
-        if (localDayKey(new Date(routine.created_at)) !== localDayKey()) continue;
-        const previous = fallback[routine.brand];
-        fallback[routine.brand] = { date: localDayKey(), count: (previous?.count ?? 0) + 1 };
-      }
-      setDailyRoutineCounts(fallback);
+      setRoutinesLoading(false);
       setDailyCountsReady(true);
-    }).catch(() => { if (active) setDailyCountsReady(true); });
+
+      if (nichesResult.status === "fulfilled") {
+        setNiches((nichesResult.value as DatabaseNiche[]).filter(niche => !EXCLUDED_NICHE.test(niche.nicho) && Number(niche.total) > 0));
+      } else {
+        setNichesError("Não foi possível carregar os nichos agora. Tente novamente em instantes.");
+      }
+      setNichesLoading(false);
+    })().catch(() => {
+      if (!active) return;
+      setRoutinesLoading(false);
+      setDailyCountsReady(true);
+      setNichesLoading(false);
+      setNichesError("Não foi possível preparar o planejador agora. Tente novamente em instantes.");
+    });
     return () => { active = false; };
   }, []);
 
   const createRoutine = useCallback(async () => {
-    if (limitReached || !selectedNiche) return;
+    if (creatingRef.current || limitReached || !selectedNiche) return;
+    creatingRef.current = true;
+    try {
     setError(null); setPhase("searching");
     const available = selectedNiche === "auto" ? niches : niches.filter(niche => niche.nicho === selectedNiche);
     const chosen = available[Math.floor(Math.random() * available.length)];
@@ -1541,10 +1567,10 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
     const total = Math.max(Number(chosen.total) || 0, quantity);
     const start = total > 40 ? Math.floor(Math.random() * Math.max(1, total - 40)) : 0;
     const searchingDelay = new Promise<void>(resolve => window.setTimeout(resolve, 2800));
-    const { data, error: fetchError } = await supabase.from("videos_achadinhos").select("*").eq("nicho", chosen.nicho).range(start, start + Math.max(40, quantity * 4));
+    const data = await getVideoPage(chosen.nicho, start, Math.max(40, quantity * 4), "message_id, nicho, link_video, legenda, caption, caption_pt_br, hashtags");
     await searchingDelay;
     const candidates = shuffle(((data ?? []) as VideoRow[]).filter(video => Boolean(video.link_video))).slice(0, quantity);
-    if (fetchError || candidates.length < quantity) { setError("Não foi possível separar a quantidade de vídeos agora. Escolha outro nicho ou tente novamente."); setPhase("niche"); return; }
+    if (candidates.length < quantity) { setError("Não foi possível separar a quantidade de vídeos agora. Escolha outro nicho ou tente novamente."); setPhase("niche"); return; }
     const key = nicheKey(chosen.nicho); const captions = CAPTIONS_BY_NICHE[key] ?? CAPTIONS_BY_NICHE.virais; const contentSource = candidates.find(video => video.legenda || video.caption || video.caption_pt_br || video.hashtags); const caption = contentSource?.legenda || contentSource?.caption || contentSource?.caption_pt_br || captions[Math.floor(Math.random() * captions.length)]; const hashtags = Array.isArray(contentSource?.hashtags) ? contentSource.hashtags.join(" ") : contentSource?.hashtags || HASHTAGS_BY_NICHE[key] || HASHTAGS_BY_NICHE.virais;
     const now = new Date(); const firstPost = new Date(now.getTime() + (12 + Math.floor(Math.random() * 28)) * 60_000);
     const routine: SavedRoutine = { id: crypto.randomUUID(), brand: theme.id, niche: chosen.nicho, niche_label: nicheLabel(chosen.nicho), created_at: now.toISOString(), expires_at: new Date(now.getTime() + ROUTINE_DURATION_MS).toISOString(), videos: candidates.map((video, index) => ({ id: video.message_id, url: video.link_video as string, niche: chosen.nicho, caption, hashtags, scheduled_at: new Date(firstPost.getTime() + index * 40 * 60_000).toISOString() })) };
@@ -1553,6 +1579,12 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
     const { error: saveError } = await supabase.auth.updateUser({ data: { content_routines: nextRoutines, routine_daily_counts: nextDailyCounts } });
     if (saveError) { setError("A rotina foi criada, mas não conseguimos salvá-la na sua conta. Tente novamente."); setPhase("niche"); return; }
     setRoutines(nextRoutines); setDailyRoutineCounts(nextDailyCounts); setCurrentRoutine(routine); setPhase("result");
+    } catch {
+      setError("Não foi possível criar a rotina agora. Tente novamente em instantes.");
+      setPhase("niche");
+    } finally {
+      creatingRef.current = false;
+    }
   }, [limitReached, selectedNiche, niches, quantity, routines, dailyRoutineCounts, routineCountToday, theme.id, todayKey]);
 
   return <AnimatePresence mode="wait">

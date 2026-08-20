@@ -17,6 +17,7 @@ import {
   NichoIcon, IconRelogio, EvaLoader, type NichoTipo,
 } from "@/components/EvaIcons";
 import { getBrandTheme, type BrandId, type BrandTheme } from "@/lib/brandTheme";
+import { getCreativePage, getVideoNiches, getVideoPage } from "@/lib/contentCache";
 
 const EvaFlow = lazy(() => import("@/components/EvaFlow"));
 const MaluPreflightFlow = lazy(() => import("@/components/EvaFlow").then((module) => ({ default: module.MaluPreflightFlow })));
@@ -218,6 +219,30 @@ function VideoModal({ url, onClose }: { url:string; onClose:()=>void }) {
 function videoPreviewUrl(url: string | null) {
   if (!url) return "";
   return url.includes("#") ? url : `${url}#t=0.15`;
+}
+
+function DeferredVideoPreview({ url, className, style }: { url: string | null; className?: string; style?: CSSProperties }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || shouldLoad) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setShouldLoad(true);
+      observer.disconnect();
+    }, { rootMargin: "360px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return <div ref={containerRef} className={className} style={style}>
+    {shouldLoad && url && <video src={videoPreviewUrl(url)} preload="auto" muted playsInline
+      onLoadedData={(event) => { event.currentTarget.pause(); }}
+      className="w-full h-full object-cover" />}
+    {!shouldLoad && <div className="w-full h-full animate-pulse bg-white/10" />}
+  </div>;
 }
 
 function PrimaryBtn({ children, onClick, disabled }: {
@@ -768,6 +793,7 @@ const NICHO_MAP: Record<string,string> = {
 
 function PackScreen({ onBack, theme }: { onBack:()=>void; theme: BrandTheme }) {
   const VIDEO_PAGE_SIZE = 24;
+  const VIDEO_FIELDS = "message_id, nicho, link_video, link_shopee, topico_original, r2_key";
   const [nichos, setNichos]       = useState<NichoRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [nichoCurr, setNichoCurr] = useState<NichoRow|null>(null);
@@ -776,44 +802,53 @@ function PackScreen({ onBack, theme }: { onBack:()=>void; theme: BrandTheme }) {
   const [loadingMoreVideos, setLoadingMoreVideos] = useState(false);
   const [hasMoreVideos, setHasMoreVideos] = useState(false);
   const [modalUrl, setModalUrl]   = useState<string|null>(null);
+  const [error, setError] = useState<string|null>(null);
+  const videoRequestRef = useRef(0);
 
   useEffect(() => {
-    supabase.rpc("get_nichos_videos")
-      .then(({ data }) => { setNichos((data as NichoRow[]) ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
+    let active = true;
+    getVideoNiches()
+      .then((data) => { if (active) setNichos((data as NichoRow[]) ?? []); })
+      .catch(() => { if (active) setError("Não foi possível carregar os nichos agora. Tente novamente."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   async function openNicho(n: NichoRow) {
+    const requestId = ++videoRequestRef.current;
     setNichoCurr(n);
     setVideos([]);
     setHasMoreVideos(false);
+    setError(null);
     setVLoading(true);
-    const { data } = await supabase
-      .from("videos_achadinhos")
-      .select("message_id, nicho, link_video, link_shopee, topico_original, r2_key")
-      .eq("nicho", n.nicho)
-      .order("message_id", { ascending:false })
-      .range(0, VIDEO_PAGE_SIZE - 1);
-    const initialVideos = (data as VideoItem[]) ?? [];
-    setVideos(initialVideos);
-    setHasMoreVideos(initialVideos.length === VIDEO_PAGE_SIZE);
-    setVLoading(false);
+    try {
+      const data = await getVideoPage(n.nicho, 0, VIDEO_PAGE_SIZE, VIDEO_FIELDS);
+      if (requestId !== videoRequestRef.current) return;
+      const initialVideos = (data as VideoItem[]) ?? [];
+      setVideos(initialVideos);
+      setHasMoreVideos(initialVideos.length === VIDEO_PAGE_SIZE);
+    } catch {
+      if (requestId === videoRequestRef.current) setError("Não foi possível carregar os vídeos deste nicho. Tente novamente.");
+    } finally {
+      if (requestId === videoRequestRef.current) setVLoading(false);
+    }
   }
 
   async function loadMoreVideos() {
     if (!nichoCurr || loadingMoreVideos) return;
     setLoadingMoreVideos(true);
+    setError(null);
     const start = videos.length;
-    const { data } = await supabase
-      .from("videos_achadinhos")
-      .select("message_id, nicho, link_video, link_shopee, topico_original, r2_key")
-      .eq("nicho", nichoCurr.nicho)
-      .order("message_id", { ascending:false })
-      .range(start, start + VIDEO_PAGE_SIZE - 1);
-    const nextVideos = (data as VideoItem[]) ?? [];
-    setVideos((current) => [...current, ...nextVideos]);
-    setHasMoreVideos(nextVideos.length === VIDEO_PAGE_SIZE);
-    setLoadingMoreVideos(false);
+    try {
+      const data = await getVideoPage(nichoCurr.nicho, start, VIDEO_PAGE_SIZE, VIDEO_FIELDS);
+      const nextVideos = (data as VideoItem[]) ?? [];
+      setVideos((current) => [...current, ...nextVideos]);
+      setHasMoreVideos(nextVideos.length === VIDEO_PAGE_SIZE);
+    } catch {
+      setError("Não foi possível carregar mais vídeos. Tente novamente.");
+    } finally {
+      setLoadingMoreVideos(false);
+    }
   }
 
   /* ── Video list view ── */
@@ -852,14 +887,7 @@ function PackScreen({ onBack, theme }: { onBack:()=>void; theme: BrandTheme }) {
                     style={{ background: CARD_DARK, boxShadow:"0 2px 10px rgba(0,0,0,0.2)" }}>
                     <div className="relative cursor-pointer active:opacity-80 transition-opacity"
                       onClick={() => v.link_video && setModalUrl(v.link_video)}>
-                      <video
-                        src={videoPreviewUrl(v.link_video)}
-                        preload="auto"
-                        muted
-                        playsInline
-                        onLoadedData={(e) => { (e.currentTarget as HTMLVideoElement).pause(); }}
-                        style={{ width:"100%", height:140, objectFit:"cover", display:"block" }}
-                      />
+                      <DeferredVideoPreview url={v.link_video} style={{ width:"100%", height:140, display:"block" }} />
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none"
                         style={{ background:"rgba(0,0,0,0.18)" }}>
                         <div className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -898,6 +926,9 @@ function PackScreen({ onBack, theme }: { onBack:()=>void; theme: BrandTheme }) {
                   {loadingMoreVideos ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
                   {loadingMoreVideos ? "Carregando..." : "Ver mais vÃ­deos"}
                 </button>}
+                {error && <div className="mt-4 rounded-xl bg-red-50 px-3 py-3 text-center text-[11px] font-semibold text-red-700">
+                  {error} <button onClick={() => void openNicho(nichoCurr)} className="underline underline-offset-2">Tentar de novo</button>
+                </div>}
               </>
             )}
           </div>
@@ -1053,12 +1084,7 @@ function CreativePreview({ set, type, theme, onClose }: { set: CreativeSet; type
 const CREATIVE_PAGE_SIZE = 24;
 
 async function getCreativeSets(type: "story" | "carousel", start = 0) {
-  return supabase.from("creative_sets")
-    .select("id, type, category, product_url, product_name, r2_folder, is_active, created_at, creative_assets(id, creative_set_id, position, image_url, r2_key, original_filename, created_at)")
-    .eq("type", type)
-    .eq("is_active", true)
-    .order("created_at", { ascending:false })
-    .range(start, start + CREATIVE_PAGE_SIZE - 1);
+  return getCreativePage(type, start, CREATIVE_PAGE_SIZE) as Promise<CreativeSet[]>;
 }
 
 function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:BrandTheme; type:"story"|"carousel" }) {
@@ -1067,6 +1093,7 @@ function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:Br
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [selected, setSelected] = useState<CreativeSet|null>(null);
+  const [error, setError] = useState<string|null>(null);
   const isCarousel = type === "carousel";
   const title = isCarousel ? "Pack de Carrosséis" : "Pack de Stories";
 
@@ -1074,13 +1101,13 @@ function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:Br
     let active = true;
 
     getCreativeSets(type)
-      .then(({ data }) => {
+      .then((data) => {
         if (!active) return;
-        const initialSets = (data as CreativeSet[]) ?? [];
+        const initialSets = data ?? [];
         setSets(initialSets);
         setHasMore(initialSets.length === CREATIVE_PAGE_SIZE);
       })
-      .catch(() => undefined)
+      .catch(() => { if (active) setError("Não foi possível carregar este pack agora. Tente novamente."); })
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
@@ -1089,11 +1116,14 @@ function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:Br
   async function loadMore() {
     if (loadingMore) return;
     setLoadingMore(true);
+    setError(null);
     try {
-      const { data } = await getCreativeSets(type, sets.length);
-      const nextSets = (data as CreativeSet[]) ?? [];
+      const data = await getCreativeSets(type, sets.length);
+      const nextSets = data ?? [];
       setSets((current) => [...current, ...nextSets]);
       setHasMore(nextSets.length === CREATIVE_PAGE_SIZE);
+    } catch {
+      setError("Não foi possível carregar mais itens. Tente novamente.");
     } finally {
       setLoadingMore(false);
     }
@@ -1123,7 +1153,7 @@ function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:Br
                 return <motion.div key={set.id} initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:index * 0.03 }}
                   className="rounded-2xl overflow-hidden bg-white" style={{ border:CARD_EDGE, boxShadow:"0 4px 14px rgba(22,19,14,0.07)" }}>
                   <button onClick={() => setSelected(set)} className={`w-full relative overflow-hidden ${isCarousel ? "aspect-[4/3] p-2 flex gap-1 bg-black/[0.03]" : "aspect-[9/14] bg-black/[0.03]"}`}>
-                    {preview.map((asset, assetIndex) => <img key={asset.id} src={asset.image_url} alt="Prévia do criativo" className={isCarousel ? "w-1/3 h-full rounded-md object-cover" : "w-full h-full object-cover"} style={isCarousel ? { transform:`rotate(${assetIndex === 1 ? 0 : assetIndex === 0 ? -2 : 2}deg)` } : undefined} />)}
+                    {preview.map((asset, assetIndex) => <img key={asset.id} src={asset.image_url} alt="Prévia do criativo" loading="lazy" decoding="async" className={isCarousel ? "w-1/3 h-full rounded-md object-cover" : "w-full h-full object-cover"} style={isCarousel ? { transform:`rotate(${assetIndex === 1 ? 0 : assetIndex === 0 ? -2 : 2}deg)` } : undefined} />)}
                     {isCarousel && assets.length > 3 && <span className="absolute right-2 bottom-2 px-2 py-1 rounded-full bg-black/70 text-white text-[9px] font-bold">+{assets.length - 3} imagens</span>}
                     {!isCarousel && <span className="absolute right-2 bottom-2 px-2 py-1 rounded-full bg-black/70 text-white text-[9px] font-bold">Story</span>}
                   </button>
@@ -1144,6 +1174,7 @@ function CreativePackScreen({ onBack, theme, type }: { onBack:()=>void; theme:Br
                 {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
                 {loadingMore ? "Carregando..." : "Ver mais"}
               </button>}
+              {error && <div className="mt-4 rounded-xl bg-red-50 px-3 py-3 text-center text-[11px] font-semibold text-red-700">{error}</div>}
             </>
           )}
         </div>
