@@ -560,23 +560,23 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">{paymentStarted ? "Pagamento iniciado" : "Ativação necessária"}</p>
             <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">
-              {paymentStarted ? <>Já fez o pagamento?<br /><em className="italic" style={{ color:P }}>Anexe o comprovante.</em></> : <>Conecte seus canais<br /><em className="italic" style={{ color:P }}>e libere sua rotina.</em></>}
+              {paymentStarted ? <>Já fez o pagamento?<br /><em className="italic" style={{ color:P }}>Anexe o comprovante.</em></> : <>Libere a {theme.name}<br /><em className="italic" style={{ color:P }}>para trabalhar no automático.</em></>}
             </h2>
           </div>
         </div>
 
         {!paymentStarted && <>
           <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">
-            Ative uma única vez a conexão oficial com {channels} para liberar o planejador e deixar sua conta pronta para usar a {theme.name}.
+            Para a {theme.name} publicar automaticamente, é preciso ativar a conexão oficial com {channels}.
           </p>
 
           <div className="mt-4 rounded-2xl p-4" style={{ background: malu ? "#FFF4EC" : "#F4F0FF" }}>
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white" style={{ color:P }}><ShieldCheck className="h-5 w-5" /></span>
               <div>
-                <p className="text-[12px] font-extrabold text-foreground">Valor destinado às plataformas</p>
+                <p className="text-[12px] font-extrabold text-foreground">Pagamento direto às plataformas</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-foreground/60">
-                  Os R$ 24,55 são destinados à ativação com {channels}. A {theme.name} não retém esse valor.
+                  Os R$ 24,55 são pagos diretamente para {channels}. A {theme.name} não fica com esse dinheiro.
                 </p>
               </div>
             </div>
@@ -587,14 +587,14 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/[0.05]" style={{ color:P }}><WalletCards className="h-5 w-5" /></span>
                 <div>
-                  <p className="text-[12px] font-extrabold">Ativação única da integração</p>
-                  <p className="text-[10.5px] text-foreground/50">US$ 4,75 · Pix ou cartão</p>
+                  <p className="text-[12px] font-extrabold">Taxa de integração oficial</p>
+                  <p className="text-[10.5px] text-foreground/50">Pix ou cartão de crédito</p>
                 </div>
               </div>
               <p className="text-[1.35rem] font-extrabold" style={{ color:P }}>R$ 24,55</p>
             </div>
             <p className="mt-3 text-[11px] leading-relaxed text-foreground/55">
-              Valor convertido de US$ 4,75 e congelado em R$ 24,55. Assim, você sabe exatamente quanto paga antes de ativar — sem variação na cobrança.
+              Essa é a taxa da integração oficial exigida pelas plataformas. A conversão foi congelada em R$ 24,55 para você não ter variação no valor.
             </p>
           </div>
 
@@ -621,12 +621,12 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
           </button>
         </div> : <button onClick={startPayment} disabled={busy} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-60" style={{ background:P }}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {busy ? "Abrindo pagamento..." : "Ativar minha integração por R$ 24,55"} {!busy && <ChevronRight className="h-4 w-4" />}
+          {busy ? "Abrindo pagamento..." : "Fazer o pagamento e ativar"} {!busy && <ChevronRight className="h-4 w-4" />}
         </button>}
         {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
 
         {!paymentStarted && <div className="mt-5 border-t border-black/[0.07] pt-4 text-center">
-          <p className="text-[11px] leading-relaxed text-foreground/55">Prefere não ativar agora? Seus packs continuam disponíveis normalmente.</p>
+          <p className="text-[11px] leading-relaxed text-foreground/55">Os packs continuam disponíveis mesmo sem ativar a integração.</p>
         </div>}
       </motion.div>
     </motion.div>
