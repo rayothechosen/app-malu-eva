@@ -7,7 +7,7 @@ import {
   Smartphone, ChefHat, Baby, Dumbbell, LayoutGrid,
   Shirt, Flame, Star, BookOpen,
   Loader2, Download, Clock, User, X, Info, ChevronDown, Images, PanelsTopLeft, ExternalLink, LogOut,
-  ShieldCheck, WalletCards, Send,
+  ShieldCheck, WalletCards, Send, AtSign, Lock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Session } from "@supabase/supabase-js";
@@ -158,7 +158,19 @@ interface VideoItem  { message_id:string; nicho:string; link_video:string|null; 
 interface NichoRow   { nicho:string; total:number; }
 interface CreativeAsset { id:string; creative_set_id:string; position:number; image_url:string; r2_key:string|null; original_filename:string|null; created_at:string; }
 interface CreativeSet { id:string; type:"story"|"carousel"; category:string|null; product_url:string|null; product_name:string|null; r2_folder:string|null; is_active:boolean; created_at:string; creative_assets:CreativeAsset[]; }
-interface IntegrationStatus { preflight_completed_at?: string; checkout_clicked_at?: string; proof_filename?: string; proof_size?: number; activated_at?: string; }
+interface IntegrationStatus {
+  preflight_completed_at?: string;
+  checkout_clicked_at?: string;
+  proof_filename?: string;
+  proof_size?: number;
+  proof_confirmed_at?: string;
+  channels_selected_at?: string;
+  connection_channels?: string[];
+  connection_notice_seen_at?: string;
+  activated_at?: string;
+}
+type LockedModuleId = "live" | "clonador" | "comunidade";
+interface LockedModuleStatus { clicked_at?: string; proof_confirmed_at?: string; release_at?: string; }
 
 type TempoId = "24h" | "36h" | "48h";
 
@@ -257,10 +269,159 @@ function PrimaryBtn({ children, onClick, disabled }: {
   );
 }
 
+const PREMIUM_MODULES: Array<{
+  id: LockedModuleId;
+  title: string;
+  desc: string;
+  url: string;
+  Comp: typeof Clock;
+  wide?: boolean;
+  tone: "warm" | "light";
+}> = [
+  { id:"live", title:"Lives Automáticas", desc:"Transmita e venda 24h por dia no piloto automático.", url:"https://malu.afiliadosbrasil.top/live", Comp:Clock, tone:"warm" },
+  { id:"clonador", title:"Clonador de Vídeos Virais", desc:"Recrie a estrutura dos vídeos que mais vendem.", url:"https://malu.afiliadosbrasil.top/clonador", Comp:Film, tone:"light" },
+  { id:"comunidade", title:"Comunidade VIP", desc:"Conversas, resultados, dúvidas e desafios entre afiliadas.", url:"https://malu.afiliadosbrasil.top/comunidade", Comp:Users, tone:"light", wide:true },
+];
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatReleaseDate(value: string) {
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatCountdown(ms: number) {
+  const safe = Math.max(0, ms);
+  const totalMinutes = Math.floor(safe / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  return `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}min`;
+}
+
+function LockedModuleModal({ module, status, onClose, onStatusChange }: {
+  module: (typeof PREMIUM_MODULES)[number];
+  status: LockedModuleStatus;
+  onClose:()=>void;
+  onStatusChange:(status: LockedModuleStatus)=>void;
+}) {
+  const [proof, setProof] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const confirmed = Boolean(status.proof_confirmed_at && status.release_at);
+  const remainingMs = status.release_at ? new Date(status.release_at).getTime() - now : 0;
+
+  useEffect(() => {
+    if (!status.release_at) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, [status.release_at]);
+
+  async function confirmProof() {
+    if (!proof) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const releaseAt = addDays(new Date(), 7).toISOString();
+      const next = await saveLockedModuleStatus(module.id, {
+        proof_confirmed_at: new Date().toISOString(),
+        release_at: releaseAt,
+      });
+      onStatusChange(next);
+      setProof(null);
+      setBusy(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível confirmar o comprovante agora.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+      className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5" onClick={onClose}>
+      <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
+        transition={{ type:"spring", damping:25, stiffness:260 }}
+        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-md rounded-[1.75rem] bg-white p-5 sm:p-6" style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">Módulo bloqueado</p>
+            <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">{module.title}<br /><em className="italic" style={{ color:P }}>{confirmed ? "em liberação." : "anexe o comprovante."}</em></h2>
+          </div>
+          <button onClick={onClose} aria-label="Fechar" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground/55"><X className="h-4 w-4" /></button>
+        </div>
+
+        {confirmed && status.release_at ? (
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl p-4" style={{ background:"#FFF4EC" }}>
+              <p className="text-[13px] font-extrabold text-foreground">Liberação programada</p>
+              <p className="mt-2 text-[12px] leading-relaxed text-foreground/60">
+                Este módulo será liberado em 7 dias: {formatReleaseDate(status.release_at)}.
+              </p>
+              <div className="mt-3 rounded-xl bg-white px-3 py-2.5 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-foreground/35">Tempo restante</p>
+                <p className="mt-1 text-[1.3rem] font-extrabold tabular-nums" style={{ color:P }}>{formatCountdown(remainingMs)}</p>
+              </div>
+              <p className="mt-3 text-[11.5px] leading-relaxed text-foreground/55">
+                Esse prazo existe por segurança. Tivemos casos de pessoas ativando módulos avançados, usando os recursos e solicitando reembolso dentro dos 7 dias. Para proteger a operação e manter a ferramenta sustentável para quem usa corretamente, os módulos extras entram em liberação após esse período.
+              </p>
+            </div>
+            <button onClick={onClose} className="w-full rounded-xl py-3.5 text-[13px] font-extrabold text-white" style={{ background:P }}>Entendi</button>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-3">
+            <p className="text-[13px] leading-relaxed text-foreground/60">
+              Se você já fez o pagamento deste módulo, anexe qualquer comprovante abaixo para registrar a solicitação de liberação.
+            </p>
+            <div className="rounded-2xl border border-black/[0.08] p-3.5">
+              <label htmlFor={`module-proof-${module.id}`} className="block text-[11px] font-extrabold text-foreground">Anexar comprovante de pagamento</label>
+              <input id={`module-proof-${module.id}`} type="file" onChange={(event) => setProof(event.target.files?.[0] ?? null)} className="mt-2 block w-full text-[11px] text-foreground/60 file:mr-3 file:rounded-lg file:border-0 file:bg-black/[0.06] file:px-3 file:py-2 file:text-[10px] file:font-bold file:text-foreground" />
+              {proof && <p className="mt-2 truncate text-[10px] font-semibold" style={{ color:P }}>{proof.name}</p>}
+            </div>
+            <button onClick={confirmProof} disabled={!proof || busy} className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {busy ? "Confirmando..." : "Confirmar comprovante"}
+            </button>
+            <button onClick={() => window.location.assign(module.url)} disabled={busy} className="w-full text-center text-[11px] font-extrabold underline underline-offset-2 disabled:opacity-50" style={{ color:P }}>
+              Ainda não fez o pagamento? Ver apresentação
+            </button>
+          </div>
+        )}
+
+        {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── HOME ────────────────────────────────────────────────────────────────────
 
-function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, refundRequested, theme }: { onNavigate:(s:Screen)=>void; onStart:()=>void; onLogout:()=>void; onProductsLocked:()=>void; onRefunded:()=>void; refundRequested:boolean; theme: BrandTheme }) {
+function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, onLockedModuleChange, refundRequested, lockedModules, theme }: {
+  onNavigate:(s:Screen)=>void;
+  onStart:()=>void;
+  onLogout:()=>void;
+  onProductsLocked:()=>void;
+  onRefunded:()=>void;
+  onLockedModuleChange:(moduleId: LockedModuleId, status: LockedModuleStatus)=>void;
+  refundRequested:boolean;
+  lockedModules: Partial<Record<LockedModuleId, LockedModuleStatus>>;
+  theme: BrandTheme;
+}) {
   const modsRef = useRef<HTMLDivElement>(null);
+  const [premiumOpen, setPremiumOpen] = useState<LockedModuleId | null>(null);
+  const [premiumBusy, setPremiumBusy] = useState<LockedModuleId | null>(null);
 
   const modules = [
     { id:"produtos"    as Screen, title:"Produtos em Alta",   desc:"Produtos selecionados para divulgar.", Comp:IconAlta, look:"dark"  as const, rot:-2.2 },
@@ -276,6 +437,24 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
     dark:  { card: { background: CARD_DARK, boxShadow: "0 14px 32px rgba(22,19,14,0.32)" }, title: "text-white",      desc: "text-white/60",      box: "#2C2822", stroke: "#fff",    accent: LIME },
     light: { card: { background: "#fff", border: CARD_EDGE, boxShadow: CARD_SHADOW },       title: "text-foreground", desc: "text-foreground/55", box: theme.id === "malu" ? "#FFF1E5" : "#F2EBFE", stroke: "#16130E", accent: P },
   };
+
+  async function openPremiumModule(module: (typeof PREMIUM_MODULES)[number]) {
+    const current = lockedModules[module.id] ?? {};
+    if (!current.clicked_at) {
+      setPremiumBusy(module.id);
+      try {
+        const next = await saveLockedModuleStatus(module.id, { clicked_at: new Date().toISOString() });
+        onLockedModuleChange(module.id, next);
+      } finally {
+        setPremiumBusy(null);
+        window.location.assign(module.url);
+      }
+      return;
+    }
+    setPremiumOpen(module.id);
+  }
+
+  const activePremiumModule = premiumOpen ? PREMIUM_MODULES.find(module => module.id === premiumOpen) : null;
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={PAGE_BG}>
@@ -425,8 +604,58 @@ function Home({ onNavigate, onStart, onLogout, onProductsLocked, onRefunded, ref
           {theme.name} · Sua assistente virtual
         </p>
 
+        {theme.id === "malu" && (
+          <div className="pt-8">
+            <p className="px-1 text-[10px] font-bold tracking-[0.18em] text-foreground/35 uppercase">Módulos extras</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {PREMIUM_MODULES.map((module) => {
+                const Comp = module.Comp;
+                const status = lockedModules[module.id] ?? {};
+                const confirmed = Boolean(status.release_at);
+                const busy = premiumBusy === module.id;
+                return (
+                  <motion.button
+                    key={module.id}
+                    type="button"
+                    onClick={() => void openPremiumModule(module)}
+                    initial={{ opacity:0, y:16 }}
+                    animate={{ opacity:1, y:0 }}
+                    whileTap={{ scale:0.97 }}
+                    className={`${module.wide ? "col-span-2 flex-row text-left px-5 py-4" : "min-h-[176px] flex-col text-center px-4 py-5"} relative flex items-center rounded-[1.5rem] border border-black/[0.08] bg-white shadow-[0_14px_34px_rgba(22,19,14,0.08)]`}
+                    style={{ background: module.tone === "warm" ? "#FFE5D1" : "#FFFDF8" }}>
+                    <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm text-foreground/55">
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                    </span>
+                    <span className={`${module.wide ? "mr-4 mb-0" : "mb-4"} flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm`} style={{ color:P }}>
+                      <Comp className="h-7 w-7" />
+                    </span>
+                    <span className={module.wide ? "flex min-w-0 flex-1 flex-col pr-8" : "flex flex-col items-center"}>
+                      <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] leading-tight text-foreground">{module.title}</span>
+                      <span className="mt-1.5 text-[10.5px] leading-snug text-foreground/55">{module.desc}</span>
+                      <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-black/[0.05] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.12em] text-foreground/45">
+                        <Lock className="h-3 w-3" /> {confirmed ? "Em liberação" : "Acesso bloqueado"}
+                      </span>
+                    </span>
+                    {module.wide && <ChevronRight className="h-4 w-4 shrink-0 text-foreground/25" />}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <RefundSection theme={theme} refunded={refundRequested} onRefunded={onRefunded} />
       </div>
+      <AnimatePresence>
+        {activePremiumModule && (
+          <LockedModuleModal
+            module={activePremiumModule}
+            status={lockedModules[activePremiumModule.id] ?? {}}
+            onClose={() => setPremiumOpen(null)}
+            onStatusChange={(status) => onLockedModuleChange(activePremiumModule.id, status)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -444,6 +673,13 @@ function readIntegrationStatus(metadata: unknown, brand: BrandId): IntegrationSt
   if (!integrations || typeof integrations !== "object") return {};
   const status = (integrations as Record<string, unknown>)[brand];
   return status && typeof status === "object" ? status as IntegrationStatus : {};
+}
+
+function readLockedModulesStatus(metadata: unknown): Partial<Record<LockedModuleId, LockedModuleStatus>> {
+  if (!metadata || typeof metadata !== "object") return {};
+  const modules = (metadata as Record<string, unknown>).locked_modules;
+  if (!modules || typeof modules !== "object") return {};
+  return modules as Partial<Record<LockedModuleId, LockedModuleStatus>>;
 }
 
 function hasRefundRequest(metadata: unknown) {
@@ -470,6 +706,41 @@ async function saveIntegrationStatus(brand: BrandId, update: IntegrationStatus) 
   return next;
 }
 
+async function saveLockedModuleStatus(moduleId: LockedModuleId, update: LockedModuleStatus) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error("Não foi possível identificar sua conta. Entre novamente e tente de novo.");
+
+  const currentModules = readLockedModulesStatus(user.user_metadata);
+  const current = currentModules[moduleId] ?? {};
+  const next = { ...current, ...update };
+  const { error } = await supabase.auth.updateUser({
+    data: { ...user.user_metadata, locked_modules: { ...currentModules, [moduleId]: next } },
+  });
+  if (error) throw error;
+  return next;
+}
+
+function VturbActivationVideo() {
+  useEffect(() => {
+    const scriptId = "vturb-activation-player";
+    if (document.getElementById(scriptId)) return;
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = "https://scripts.converteai.net/84921071-af8a-4102-8d78-2be90931e856/players/6a88a7d592506d5973ba6cfa/v4/player.js";
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
+  return (
+    <div
+      className="mt-4 overflow-hidden rounded-2xl bg-black"
+      dangerouslySetInnerHTML={{
+        __html: '<vturb-smartplayer id="vid-6a88a7d592506d5973ba6cfa" style="display:block;margin:0 auto;width:100%;max-width:400px;"><div class="vturb-player-placeholder" style="position:relative;width:100%;padding:133.33333333333331% 0 0;z-index:0;background-color:black;"></div></vturb-smartplayer>',
+      }}
+    />
+  );
+}
+
 function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
   theme: BrandTheme;
   status: IntegrationStatus;
@@ -479,10 +750,25 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
   const malu = theme.id === "malu";
   const checkoutUrl = INTEGRATION_CHECKOUT_URL[theme.id];
   const channels = malu ? "Shopee, TikTok e Instagram" : "ByteDance (TikTok)";
+  const channelOptions = malu
+    ? theme.channels.map(channel => ({ ...channel, name: channel.name === "Shopee" ? "Shopee Video" : channel.name }))
+    : theme.channels;
+  const initialSelectedChannels = status.connection_channels?.length
+    ? status.connection_channels
+    : channelOptions.map(channel => channel.name);
   const [proof, setProof] = useState<File | null>(null);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(initialSelectedChannels);
+  const [handles, setHandles] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const paymentStarted = Boolean(status.checkout_clicked_at);
+  const proofConfirmed = Boolean(status.proof_confirmed_at);
+  const channelsSelected = Boolean(status.channels_selected_at);
+  const noticeReady = Boolean(status.connection_notice_seen_at);
+
+  useEffect(() => {
+    setSelectedChannels(status.connection_channels?.length ? status.connection_channels : channelOptions.map(channel => channel.name));
+  }, [status.connection_channels?.join("|"), theme.id]);
 
   async function startPayment() {
     setBusy(true);
@@ -503,12 +789,11 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
     setError(null);
     try {
       const next = await saveIntegrationStatus(theme.id, {
-        proof_filename: proof.name,
-        proof_size: proof.size,
-        activated_at: new Date().toISOString(),
+        proof_confirmed_at: new Date().toISOString(),
       });
       onStatusChange(next);
-      onActivated(next);
+      setProof(null);
+      setBusy(false);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Não foi possível liberar a integração agora.");
       setBusy(false);
@@ -517,7 +802,66 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
 
   // Depois do primeiro clique no checkout, este é deliberadamente um modal
   // separado: nenhuma copy, taxa ou informação da etapa inicial é renderizada.
-  if (paymentStarted) {
+  async function submitChannels() {
+    if (!selectedChannels.length) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await saveIntegrationStatus(theme.id, {
+        channels_selected_at: new Date().toISOString(),
+        connection_channels: selectedChannels,
+      });
+      onStatusChange(next);
+      setBusy(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Nao foi possivel salvar os canais agora.");
+      setBusy(false);
+    }
+  }
+
+  async function submitHandles(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formChannels = status.connection_channels?.length ? status.connection_channels : selectedChannels;
+    if (formChannels.some(channel => !handles[channel]?.trim())) {
+      setError("Preencha o @ de todos os canais selecionados.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await saveIntegrationStatus(theme.id, { connection_notice_seen_at: new Date().toISOString() });
+      onStatusChange(next);
+      setBusy(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Nao foi possivel continuar agora.");
+      setBusy(false);
+    }
+  }
+
+  async function finishConnectionSetup() {
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await saveIntegrationStatus(theme.id, { activated_at: new Date().toISOString() });
+      onStatusChange(next);
+      onActivated(next);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Nao foi possivel liberar a integracao agora.");
+      setBusy(false);
+    }
+  }
+
+  function toggleChannel(channelName: string) {
+    setError(null);
+    setSelectedChannels(current => {
+      if (current.includes(channelName)) {
+        return current.length === 1 ? current : current.filter(item => item !== channelName);
+      }
+      return [...current, channelName];
+    });
+  }
+
+  if (paymentStarted && !proofConfirmed) {
     return (
       <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
         className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
@@ -538,10 +882,111 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
           </div>
           <button onClick={confirmProof} disabled={!proof || busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {busy ? "Confirmando..." : "Confirmar e liberar planejador de rotinas"}
+            {busy ? "Confirmando..." : "Confirmar e liberar as conexoes"}
           </button>
           <button onClick={startPayment} disabled={busy} className="mt-4 w-full text-center text-[11px] font-extrabold underline underline-offset-2 disabled:opacity-50" style={{ color:P }}>
             Ainda não fez o pagamento? Faça por aqui
+          </button>
+          {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  if (proofConfirmed && !channelsSelected) {
+    return (
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
+        <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
+          transition={{ type:"spring", damping:25, stiffness:260 }}
+          className="w-full max-w-md rounded-[1.75rem] bg-white p-5 sm:p-6" style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">Conexoes</p>
+          <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">Onde a {theme.name}<br /><em className="italic" style={{ color:P }}>vai conectar?</em></h2>
+          <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">Selecione as redes onde voce quer usar a conexao oficial.</p>
+          <div className="mt-4 grid grid-cols-1 gap-2.5">
+            {channelOptions.map(channel => {
+              const selected = selectedChannels.includes(channel.name);
+              return (
+                <button key={channel.name} type="button" onClick={() => toggleChannel(channel.name)}
+                  className="flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition"
+                  style={{ borderColor: selected ? P : "rgba(0,0,0,0.08)", background: selected ? (malu ? "#FFF4EC" : "#F4F0FF") : "#FFFFFF" }}>
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-sm">
+                      <img src={channel.logoUrl} alt={channel.name} className="h-5 w-5" draggable={false} />
+                    </span>
+                    <span className="text-[12px] font-extrabold text-foreground">{channel.name}</span>
+                  </span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: selected ? P : "rgba(0,0,0,0.06)", color: selected ? "#fff" : "rgba(0,0,0,0.35)" }}>
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button onClick={submitChannels} disabled={!selectedChannels.length || busy} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? "Salvando..." : "Continuar"}
+          </button>
+          {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  if (channelsSelected && !noticeReady) {
+    const formChannels = status.connection_channels?.length ? status.connection_channels : selectedChannels;
+    return (
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
+        <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
+          transition={{ type:"spring", damping:25, stiffness:260 }}
+          className="w-full max-w-md rounded-[1.75rem] bg-white p-5 sm:p-6" style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">Usuarios das redes</p>
+          <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">Informe seu usuario<br /><em className="italic" style={{ color:P }}>em cada rede.</em></h2>
+          <form onSubmit={submitHandles} className="mt-5 space-y-3">
+            {formChannels.map(channel => (
+              <label key={channel} className="block rounded-2xl border border-black/[0.08] bg-white px-4 py-3">
+                <span className="flex items-center gap-2 text-[11px] font-extrabold text-foreground"><AtSign className="h-3.5 w-3.5" style={{ color:P }} /> Usuario no {channel}</span>
+                <input
+                  value={handles[channel] ?? ""}
+                  onChange={(event) => setHandles(current => ({ ...current, [channel]: event.target.value }))}
+                  placeholder="@seuperfil"
+                  className="mt-2 w-full bg-transparent text-[14px] font-bold outline-none placeholder:text-foreground/30"
+                />
+              </label>
+            ))}
+            <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {busy ? "Enviando..." : "Enviar usuarios"}
+            </button>
+          </form>
+          {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  if (noticeReady) {
+    return (
+      <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+        className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/65 p-3 sm:p-5">
+        <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:28 }}
+          transition={{ type:"spring", damping:25, stiffness:260 }}
+          className="w-full max-w-md rounded-[1.75rem] bg-white p-5 sm:p-6" style={{ boxShadow:"0 24px 80px rgba(0,0,0,0.35)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-foreground/40">Tudo encaminhado</p>
+          <h2 className="mt-2 text-[1.55rem] font-extrabold leading-[1.12] tracking-tight">Integracao em analise<br /><em className="italic" style={{ color:P }}>pela nossa equipe.</em></h2>
+          <div className="mt-5 rounded-2xl p-4" style={{ background: malu ? "#FFF4EC" : "#F4F0FF" }}>
+            <p className="text-[13px] font-extrabold text-foreground">Sua integracao ja comecou.</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-foreground/60">
+              A conexao leva de 2 a 4 dias uteis dependendo das proprias plataformas. Nossa equipe ja comecou suas integracoes e voce sera avisado no e-mail assim que tudo for liberado.
+            </p>
+            <p className="mt-3 text-[12px] leading-relaxed text-foreground/70">
+              Enquanto isso, voce ja pode usar a {theme.name} para planejar rotinas e postar manualmente.
+            </p>
+          </div>
+          <button onClick={finishConnectionSetup} disabled={busy} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[13px] font-extrabold text-white disabled:opacity-50" style={{ background:P }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? "Liberando..." : `Usar a ${theme.name} agora`}
           </button>
           {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-700">{error}</p>}
         </motion.div>
@@ -569,6 +1014,8 @@ function IntegrationModal({ theme, status, onStatusChange, onActivated }: {
           <p className="mt-4 text-[13px] leading-relaxed text-foreground/60">
             Para a {theme.name} publicar automaticamente, é preciso ativar a conexão oficial com {channels}.
           </p>
+
+          {malu && <VturbActivationVideo />}
 
           <div className="mt-4 rounded-2xl p-4" style={{ background: malu ? "#FFF4EC" : "#F4F0FF" }}>
             <div className="flex items-start gap-3">
@@ -1961,6 +2408,7 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
   const [authenticated, setAuthenticated] = useState(false);
   const [integrationOpen, setIntegrationOpen] = useState(false);
   const [integrationStatus, setIntegrationStatus] = useState<IntegrationStatus>({});
+  const [lockedModules, setLockedModules] = useState<Partial<Record<LockedModuleId, LockedModuleStatus>>>({});
   const [refundRequested, setRefundRequested] = useState(false);
   const [productsLockedOpen, setProductsLockedOpen] = useState(false);
   const [automationLockedOpen, setAutomationLockedOpen] = useState(false);
@@ -1981,6 +2429,7 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
       if (session) setAccountBlocked(false);
       setAuthenticated(Boolean(session) && !isAnonymous);
       setIntegrationStatus(session ? readIntegrationStatus(session.user.user_metadata, brand) : {});
+      setLockedModules(session ? readLockedModulesStatus(session.user.user_metadata) : {});
       setRefundRequested(session ? hasRefundRequest(session.user.user_metadata) : false);
       setAuthReady(true);
     };
@@ -1994,6 +2443,7 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
     await supabase.auth.signOut();
     navigate(homePath, { replace:true });
     setIntegrationStatus({});
+    setLockedModules({});
     setRefundRequested(false);
     setAccountBlocked(false);
   }
@@ -2040,6 +2490,10 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
     await supabase.auth.signOut();
   }
 
+  function handleLockedModuleChange(moduleId: LockedModuleId, status: LockedModuleStatus) {
+    setLockedModules(current => ({ ...current, [moduleId]: status }));
+  }
+
   if (!authReady) return <div className="min-h-screen flex items-center justify-center" style={{ ...brandVars(theme), ...PAGE_BG }}><EvaLoader label="Carregando..." /></div>;
   if (accountBlocked) return <div style={brandVars(theme)}><AccountBlockedScreen theme={theme} /></div>;
   if (!authenticated) return <div style={brandVars(theme)}><AuthScreen theme={theme} /></div>;
@@ -2049,7 +2503,17 @@ export default function Eva({ versao, brand = "eva", standaloneBasePath }: { ver
     <AnimatePresence mode="wait">
       {screen === "home" && (
         <motion.div key="home" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
-          <Home onNavigate={nav} onStart={startAutomatic} onLogout={handleLogout} onProductsLocked={() => setProductsLockedOpen(true)} onRefunded={handleRefunded} refundRequested={refundRequested} theme={theme} />
+          <Home
+            onNavigate={nav}
+            onStart={startAutomatic}
+            onLogout={handleLogout}
+            onProductsLocked={() => setProductsLockedOpen(true)}
+            onRefunded={handleRefunded}
+            onLockedModuleChange={handleLockedModuleChange}
+            refundRequested={refundRequested}
+            lockedModules={lockedModules}
+            theme={theme}
+          />
         </motion.div>
       )}
       {screen === "destrava" && !refundRequested && (
