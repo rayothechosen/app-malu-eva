@@ -1567,11 +1567,11 @@ export default function EvaFlow({ produtos: _produtos, onExit, theme }: { produt
     const total = Math.max(Number(chosen.total) || 0, quantity);
     const start = total > 40 ? Math.floor(Math.random() * Math.max(1, total - 40)) : 0;
     const searchingDelay = new Promise<void>(resolve => window.setTimeout(resolve, 2800));
-    const data = await getVideoPage(chosen.nicho, start, Math.max(40, quantity * 4), "message_id, nicho, link_video, legenda, caption, caption_pt_br, hashtags");
+    const data = await getVideoPage(chosen.nicho, start, Math.max(40, quantity * 4), "message_id, nicho, link_video, topico_original, r2_key");
     await searchingDelay;
     const candidates = shuffle(((data ?? []) as VideoRow[]).filter(video => Boolean(video.link_video))).slice(0, quantity);
     if (candidates.length < quantity) { setError("Não foi possível separar a quantidade de vídeos agora. Escolha outro nicho ou tente novamente."); setPhase("niche"); return; }
-    const key = nicheKey(chosen.nicho); const captions = CAPTIONS_BY_NICHE[key] ?? CAPTIONS_BY_NICHE.virais; const contentSource = candidates.find(video => video.legenda || video.caption || video.caption_pt_br || video.hashtags); const caption = contentSource?.legenda || contentSource?.caption || contentSource?.caption_pt_br || captions[Math.floor(Math.random() * captions.length)]; const hashtags = Array.isArray(contentSource?.hashtags) ? contentSource.hashtags.join(" ") : contentSource?.hashtags || HASHTAGS_BY_NICHE[key] || HASHTAGS_BY_NICHE.virais;
+    const key = nicheKey(chosen.nicho); const captions = CAPTIONS_BY_NICHE[key] ?? CAPTIONS_BY_NICHE.virais; const caption = captions[Math.floor(Math.random() * captions.length)]; const hashtags = HASHTAGS_BY_NICHE[key] || HASHTAGS_BY_NICHE.virais;
     const now = new Date(); const firstPost = new Date(now.getTime() + (12 + Math.floor(Math.random() * 28)) * 60_000);
     const routine: SavedRoutine = { id: crypto.randomUUID(), brand: theme.id, niche: chosen.nicho, niche_label: nicheLabel(chosen.nicho), created_at: now.toISOString(), expires_at: new Date(now.getTime() + ROUTINE_DURATION_MS).toISOString(), videos: candidates.map((video, index) => ({ id: video.message_id, url: video.link_video as string, niche: chosen.nicho, caption, hashtags, scheduled_at: new Date(firstPost.getTime() + index * 40 * 60_000).toISOString() })) };
     const nextRoutines = [routine, ...activeRoutines(routines)].slice(0, 12);
