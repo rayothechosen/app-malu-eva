@@ -278,9 +278,9 @@ const PREMIUM_MODULES: Array<{
   wide?: boolean;
   tone: "warm" | "light";
 }> = [
-  { id:"live", title:"Lives Automáticas", desc:"Transmita e venda 24h por dia no piloto automático.", url:"https://malu.afiliadosbrasil.top/live", Comp:Clock, tone:"warm" },
-  { id:"clonador", title:"Clonador de Vídeos Virais", desc:"Recrie a estrutura dos vídeos que mais vendem.", url:"https://malu.afiliadosbrasil.top/clonador", Comp:Film, tone:"light" },
-  { id:"comunidade", title:"Comunidade VIP", desc:"Conversas, resultados, dúvidas e desafios entre afiliadas.", url:"https://malu.afiliadosbrasil.top/comunidade", Comp:Users, tone:"light", wide:true },
+  { id:"live", title:"Lives Automáticas", desc:"Transmita e venda 24h por dia no piloto automático.", url:"https://malu.afiliadasbrasil.com/live", Comp:Clock, tone:"warm" },
+  { id:"clonador", title:"Clonador de Vídeos Virais", desc:"Recrie a estrutura dos vídeos que mais vendem.", url:"https://malu.afiliadasbrasil.com/clonador", Comp:Film, tone:"light" },
+  { id:"comunidade", title:"Comunidade VIP", desc:"Conversas, resultados, dúvidas e desafios entre afiliadas.", url:"https://malu.afiliadasbrasil.com/comunidade", Comp:Users, tone:"light", wide:true },
 ];
 
 function addDays(date: Date, days: number) {
